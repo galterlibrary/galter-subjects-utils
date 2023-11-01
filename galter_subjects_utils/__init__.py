@@ -6,7 +6,4 @@
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
 
-"""MeSH subject terms for InvenioRDM."""
-
-
-__version__ = '2023.01.01'
+"""galter-subjects-utils for InvenioRDM."""
