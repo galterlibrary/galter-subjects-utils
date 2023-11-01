@@ -22,17 +22,8 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-          # You can add/remove combinations e.g. `dev` requirements or `postgresql13` by adding
-          # a new item to the following lists.
-          python-version: [3.8, 3.9, 3.10, 3.11]
-          requirements-level: [min, pypi]
-
-          exclude:
-            - python-version: 3.8
-              requirements-level: min
-
-            - python-version: 3.9
-              requirements-level: min
+          python-version: ["3.8", "3.9", "3.10", "3.11"]
+          requirements-level: [pypi]
 
     steps:
       - name: Checkout
