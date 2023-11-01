@@ -20,8 +20,8 @@ from .writer import write_jsonl
 
 
 @click.group()
-def tool_cli():
-    """Top-level Click group."""
+def main():
+    """A subjects CLI utility (mostly for InvenioRDM)."""
 
 
 defaults = {
@@ -63,7 +63,7 @@ def to_converter_kwargs(parameters, downloader):
     return result
 
 
-@tool_cli.command()
+@main.command()
 @click.option("--year", "-y", default=defaults["year"])
 @click.option(
     "--filter", "-f",
