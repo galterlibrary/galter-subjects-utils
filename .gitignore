@@ -27,6 +27,7 @@ var/
 *.egg
 Pipfile
 Pipfile.lock
+.venv/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -47,6 +48,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+.pytest_cache/
 
 # Translations
 *.mo
