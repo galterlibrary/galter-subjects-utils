@@ -1,0 +1,53 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2023 Northwestern University.
+#
+
+name: galter-subjects-utils CI
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason'
+        required: false
+        default: 'Manual trigger'
+
+jobs:
+  Tests:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+          # You can add/remove combinations e.g. `dev` requirements or `postgresql13` by adding
+          # a new item to the following lists.
+          python-version: [3.8, 3.9, 3.10, 3.11]
+          requirements-level: [min, pypi]
+
+          exclude:
+            - python-version: 3.8
+              requirements-level: min
+
+            - python-version: 3.9
+              requirements-level: min
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install .[dev]
+          pip freeze
+
+      - name: Run tests
+        run: |
+          invoke test --no-color
