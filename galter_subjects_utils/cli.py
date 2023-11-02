@@ -43,7 +43,7 @@ def to_downloader_kwargs(parameters):
         "year": parameters["year"],
         "prefixes": filter_to_prefixes[parameters["filter"]],
         "cache": not parameters["no_cache"],
-        "directory": Path.cwd() / parameters["downloads-dir"]
+        "directory": Path.cwd() / parameters["downloads_dir"]
     }
 
     return result
@@ -75,7 +75,7 @@ def to_converter_kwargs(parameters, downloader):
     type=click.Path(path_type=Path),
     default=defaults["downloads-dir"])
 @click.option(
-    "--ouput-file", "-o",
+    "--output-file", "-o",
     type=click.Path(path_type=Path),
     default=defaults["output-file"] / "subjects_mesh.jsonl",
 )
@@ -90,6 +90,6 @@ def mesh(**parameters):
     converter_kwargs = to_converter_kwargs(parameters, downloader)
     converter = MeSHRDMConverter(**converter_kwargs)
 
-    filepath = write_jsonl(converter)
+    filepath = write_jsonl(converter, parameters["output_file"])
 
     print(f"MeSH terms written here {filepath}")

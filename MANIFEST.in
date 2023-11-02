@@ -11,17 +11,7 @@
 #
 #  check-manifest -u
 
-include .editorconfig
-recursive-include .github/workflows *.yml
-
 # added by check-manifest
-include *.rst
 include *.md
-include *.sh
-include *.txt
-recursive-include galter_subjects_utils *.html
-recursive-include galter_subjects_utils *.yaml
-recursive-include galter_subjects_utils *.jsonl
-recursive-include galter_subjects_utils *.gitkeep
 recursive-include tests *.py
 recursive-include tests *.gitkeep
