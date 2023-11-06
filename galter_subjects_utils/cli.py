@@ -13,9 +13,9 @@ from pathlib import Path
 
 import click
 
-from .converter import MeSHRDMConverter
-from .downloader import MeSHDownloader
-from .reader import MeSHReader, topic_filter
+from .converter import LCSHRDMConverter, MeSHRDMConverter
+from .downloader import LCSHDownloader, MeSHDownloader
+from .reader import MeSHReader, read_jsonl, topic_filter
 from .writer import write_jsonl
 
 
@@ -32,7 +32,7 @@ defaults = {
 }
 
 
-def to_downloader_kwargs(parameters):
+def to_mesh_downloader_kwargs(parameters):
     """To MeSHDownloader kwargs."""
     filter_to_prefixes = {
         "topic": ["d"],
@@ -49,7 +49,7 @@ def to_downloader_kwargs(parameters):
     return result
 
 
-def to_converter_kwargs(parameters, downloader):
+def to_mesh_converter_kwargs(parameters, downloader):
     """Convert."""
     result = {}
     if parameters["filter"] in ["topic", "topic-qualifier"]:
@@ -83,13 +83,60 @@ def to_converter_kwargs(parameters, downloader):
 def mesh(**parameters):
     """Generate new MeSH terms file."""
     # Download
-    downloader_kwargs = to_downloader_kwargs(parameters)
+    downloader_kwargs = to_mesh_downloader_kwargs(parameters)
     downloader = MeSHDownloader(**downloader_kwargs)
     downloader.download()
 
-    converter_kwargs = to_converter_kwargs(parameters, downloader)
+    # Convert
+    converter_kwargs = to_mesh_converter_kwargs(parameters, downloader)
     converter = MeSHRDMConverter(**converter_kwargs)
 
+    # Write
     filepath = write_jsonl(converter, parameters["output_file"])
 
     print(f"MeSH terms written here {filepath}")
+
+
+def to_lcsh_downloader_kwargs(parameters):
+    """To LCSHDownloader kwargs."""
+    result = {
+        "cache": not parameters["no_cache"],
+        "directory": Path.cwd() / parameters["downloads_dir"]
+    }
+    return result
+
+
+def to_lcsh_converter_kwargs(downloader):
+    """Provide LCSH converter args from `downloader`."""
+    result = {
+        "topics": read_jsonl(downloader.extracted_filepath)
+    }
+    return result
+
+
+@main.command()
+@click.option(
+    "--downloads-dir", "-d",
+    type=click.Path(path_type=Path),
+    default=defaults["downloads-dir"])
+@click.option(
+    "--output-file", "-o",
+    type=click.Path(path_type=Path),
+    default=defaults["output-file"] / "subjects_lcsh.jsonl",
+)
+@click.option("--no-cache", default=False)
+def lcsh(**parameters):
+    """Generate new MeSH terms file."""
+    # Download
+    downloader_kwargs = to_lcsh_downloader_kwargs(parameters)
+    downloader = LCSHDownloader(**downloader_kwargs)
+    downloader.download()
+
+    # Convert
+    converter_kwargs = to_lcsh_converter_kwargs(downloader)
+    converter = LCSHRDMConverter(**converter_kwargs)
+
+    # Write
+    filepath = write_jsonl(converter, parameters["output_file"])
+
+    print(f"LCSH terms written here {filepath}")

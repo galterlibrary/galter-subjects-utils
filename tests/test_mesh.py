@@ -171,7 +171,7 @@ def test_converter():
 
 
 def test_write():
-    filepath = Path(__file__).parent / "test_subjects.jsonl"
+    filepath = Path(__file__).parent / "test_subjects_mesh.jsonl"
     entries = [
         {
             "id": 'D000015',
@@ -201,7 +201,4 @@ def test_write():
     read_entries = list(read_jsonl(filepath))
     assert entries == read_entries
 
-    try:
-        filepath.unlink()  # TODO: add missing_ok=True starting python 3.8+
-    except FileNotFoundError:
-        pass
+    filepath.unlink(missing_ok=True)
