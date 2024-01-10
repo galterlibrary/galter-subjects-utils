@@ -1,0 +1,10 @@
+
+MH  - Access to Primary Care
+UI  - D000092863
+MN  - N4.590.374.350.250
+MN  - N5.300.430.188
+MS  - The degree to which individuals are inhibited or facilitated in their ability to gain entry to and to receive PRIMARY CARE.
+HN  - 2023
+BX  - Accessibility of Primary Care
+BX  - Accessible Primary Care
+FX  - Primary Health Care

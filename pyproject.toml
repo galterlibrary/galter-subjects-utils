@@ -65,4 +65,4 @@ addopts = '--isort --pydocstyle --pycodestyle --doctest-glob="*.rst" --doctest-m
 testpaths = ["tests", "galter_subjects_utils"]
 
 [tool.pydocstyle]
-add_ignore = ["D401"]
+add_ignore = ["D401", "D403"]
