@@ -1,0 +1,25 @@
+File write open
+MH Changes and deletes
+
+# = delete
+[] = new status of old term (P = EP; N = EN or PT; C = SCR term; M = MH; null = old term not in New MeSH)
+* = old term in a different record than the new term
+
+MH OLD = Far East [P]
+MH NEW = Asia, Eastern
+
+MH OLD = American Indians or Alaska Natives # [P]
+MH NEW = American Indian or Alaska Native
+
+MH OLD = Asians [N*]
+MH NEW = Asian People
+
+MH OLD = Whites [P*]
+MH NEW = White People
+
+MH OLD = RNA, Guide []
+MH NEW = RNA, Guide, Kinetoplastida
+
+Total replaced     = X
+Total deleted      = Y
+Total without YE   = 0

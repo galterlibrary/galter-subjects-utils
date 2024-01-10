@@ -23,16 +23,9 @@ from galter_subjects_utils.writer import write_jsonl
 
 @contextmanager
 def fake_request_context(url, stream):
-    fp = ""
-    base_url = (
-        "https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/asciimesh/"
-    )
-    if url == base_url + "d2022.bin":
-        fp = Path(__file__).parent / "data/fake_d2022.bin"
-    elif url == base_url + "q2022.bin":
-        fp = Path(__file__).parent / "data/fake_q2022.bin"
-    else:
-        raise Exception("Update the test!")
+    """A faked requests.get context result."""
+    filename = url.rsplit("/", 1)[-1]
+    fp = Path(__file__).parent / f"data/mesh/fake_{filename}"
 
     FakeRequestContext = namedtuple("FakeRequestContext", ["raw"])
 
@@ -51,25 +44,31 @@ def assert_includes(dicts, dict_cores):
 
 
 @mock.patch('galter_subjects_utils.downloader.requests.get')
-def test_downloader(patched_get):
+def test_downloader(patched_get, tmp_path):
+    downloads_dir = tmp_path / "downloads"
+    downloads_dir.mkdir()
     # patch requests.get to return files
     patched_get.side_effect = fake_request_context
-    downloads_dir = Path(__file__).parent / "downloads"
+
+    # Testing the current_year variant seemed like it would lead to a test
+    # mirror, so it has been tested manually instead. This really just tests
+    # that we have the right name, interfaces and final files written to disk
+    # in right location.
     downloader = MeSHDownloader(
-        year="2022",
-        prefixes=["d", "q"],
+        year="2023",
         directory=downloads_dir
     )
-
     downloader.download()
 
     patched_get.assert_called()
-    assert downloads_dir / "d2022.bin" == downloader.prefix_to_filepath["d"]
-    assert downloads_dir / "q2022.bin" == downloader.prefix_to_filepath["q"]
+    assert (downloads_dir / "d2023.bin").exists()
+    assert (downloads_dir / "q2023.bin").exists()
+    assert (downloads_dir / "meshnew2023.txt").exists()
+    assert (downloads_dir / "replace2023.txt").exists()
 
 
 def test_reader_descriptors_filter():
-    filepath = Path(__file__).parent / "data" / "fake_d2022.bin"
+    filepath = Path(__file__).parent / "data" / "mesh" / "fake_d2022.bin"
 
     reader = MeSHReader(filepath, filter=topic_filter)
     topics = [t for t in reader]
@@ -91,13 +90,19 @@ def test_reader_descriptors_filter():
             'DC': '1',
             'AQ': ['AB', 'AH'],
             'UI': 'D000005'
+        },
+        {
+            'MH': 'American Indians or Alaska Natives',
+            'DC': '1',
+            'AQ': ['CL', 'ED', 'EH', 'GE', 'HI', 'LJ', 'PX', 'SN'],
+            'UI': 'D000086562'
         }
     ]
     assert_includes(topics, expected_cores)
 
 
 def test_reader_qualifiers():
-    filepath = Path(__file__).parent / "data" / "fake_q2022.bin"
+    filepath = Path(__file__).parent / "data" / "mesh" / "fake_q2023.bin"
 
     reader = MeSHReader(filepath)
     qualifiers = [q for q in reader]

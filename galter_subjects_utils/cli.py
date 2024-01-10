@@ -9,6 +9,7 @@
 """Command line tool."""
 
 from datetime import date
+from functools import wraps
 from pathlib import Path
 
 import click
@@ -34,14 +35,8 @@ defaults = {
 
 def to_mesh_downloader_kwargs(parameters):
     """To MeSHDownloader kwargs."""
-    filter_to_prefixes = {
-        "topic": ["d"],
-        "topic-qualifier": ["d", "q"],
-    }
-
     result = {
         "year": parameters["year"],
-        "prefixes": filter_to_prefixes[parameters["filter"]],
         "cache": not parameters["no_cache"],
         "directory": Path.cwd() / parameters["downloads_dir"]
     }
@@ -52,36 +47,71 @@ def to_mesh_downloader_kwargs(parameters):
 def to_mesh_converter_kwargs(parameters, downloader):
     """Convert."""
     result = {}
+
     if parameters["filter"] in ["topic", "topic-qualifier"]:
         result["topics"] = MeSHReader(
-            downloader.prefix_to_filepath["d"],
+            downloader.terms_filepath,
             filter=topic_filter,
         )
     if parameters["filter"] in ["topic-qualifier"]:
-        result["qualifiers"] = MeSHReader(downloader.prefix_to_filepath["q"])
+        result["qualifiers"] = MeSHReader(downloader.qualifiers_filepath)
 
     return result
 
 
-@main.command()
-@click.option("--year", "-y", default=defaults["year"])
-@click.option(
-    "--filter", "-f",
-    type=click.Choice(["topic", "topic-qualifier"]),
-    default=defaults["filter"],
-)
-@click.option(
-    "--downloads-dir", "-d",
-    type=click.Path(path_type=Path),
-    default=defaults["downloads-dir"])
+def mesh_download_options(f):
+    """Encapsulate common MeSH download options."""
+
+    @click.option("--year", "-y", default=defaults["year"])
+    @click.option(
+        "--filter", "-f",
+        type=click.Choice(["topic", "topic-qualifier"]),
+        default=defaults["filter"],
+    )
+    @click.option(
+        "--downloads-dir", "-d",
+        type=click.Path(path_type=Path),
+        default=defaults["downloads-dir"]
+    )
+    @click.option(
+        "--no-cache",
+        default=False,
+        help="Re-download even if already downloaded.",
+        is_flag=True
+    )
+    @wraps(f)
+    def _wrapped(*args, **kwargs):
+        """Wrap f with common download options."""
+        return f(*args, **kwargs)
+
+    return _wrapped
+
+
+@main.group()
+def mesh():
+    """MeSH related commands."""
+
+
+@mesh.command("download")
+@mesh_download_options
+def mesh_download(**parameters):
+    """Download MeSH files."""
+    downloader_kwargs = to_mesh_downloader_kwargs(parameters)
+    downloader = MeSHDownloader(**downloader_kwargs)
+    downloader.download()
+
+    print(f"Raw MeSH files written in {parameters['downloads_dir']}/")
+
+
+@mesh.command("file")
+@mesh_download_options
 @click.option(
     "--output-file", "-o",
     type=click.Path(path_type=Path),
     default=defaults["output-file"] / "subjects_mesh.jsonl",
 )
-@click.option("--no-cache", default=False)
-def mesh(**parameters):
-    """Generate new MeSH terms file."""
+def mesh_file(**parameters):
+    """Generate new MeSH subjects file."""
     # Download
     downloader_kwargs = to_mesh_downloader_kwargs(parameters)
     downloader = MeSHDownloader(**downloader_kwargs)
