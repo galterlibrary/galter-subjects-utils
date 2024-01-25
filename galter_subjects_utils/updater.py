@@ -8,11 +8,11 @@
 
 """Terms updater."""
 
-from invenio_db import db
 from invenio_access.permissions import system_identity
+from invenio_db import db
+from invenio_rdm_records.records import RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_records_resources.services.uow import RecordCommitOp
-from invenio_rdm_records.records import RDMRecord
 from sqlalchemy import bindparam, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -90,8 +90,9 @@ def update_rdm_record(record, ops_data):
 
     records_service = current_service_registry.get("records")
     commit_op = RecordCommitOp(record, records_service.indexer)
-    fake_uow = None  # the following don't use the uow object,
-                     # so passing None is fine
+    # the following on_register, on_commit don't use the uow object
+    # so passing None is fine
+    fake_uow = None
     commit_op.on_register(fake_uow)  # commits to DB
     commit_op.on_commit(fake_uow)  # reindexes in index
 
@@ -144,6 +145,7 @@ class SubjectDeltaUpdater:
     """Translates delta operations into actual changes."""
 
     def __init__(self, ops_data):
+        """Constructor."""
         self._ops_data = ops_data
 
     def update(self):

@@ -25,6 +25,7 @@ dependencies = [
     "invenio-access>=1.4.4,<2.0.0",
     "invenio-db[postgresql]>=1.1.5,<2.0.0",
     # invenio-db provides sqlalchemy & co
+    "invenio-i18n<2.0.0",  # required for v11
     "invenio-rdm-records[opensearch2]>=1.1.0,<2.0.0",
     # invenio-rdm-records includes:
     # - invenio-drafts-resources

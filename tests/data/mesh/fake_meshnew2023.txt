@@ -1,10 +1,23 @@
 
-MH  - Access to Primary Care
-UI  - D000092863
-MN  - N4.590.374.350.250
-MN  - N5.300.430.188
-MS  - The degree to which individuals are inhibited or facilitated in their ability to gain entry to and to receive PRIMARY CARE.
+MH  - Document Analysis
+UI  - D000092002
+MN  - H1.770.644.241.850.375
+MS  - A form of qualitative research that uses a systematic procedure to analyze documentary evidence and answer specific research questions.
 HN  - 2023
-BX  - Accessibility of Primary Care
-BX  - Accessible Primary Care
-FX  - Primary Health Care
+
+MH  - Family Structure
+UI  - D000092822
+MN  - F1.829.263.315.250
+MN  - I1.240.361.330
+MN  - I1.880.761.125
+MN  - I1.880.853.150.423.250
+MN  - N1.224.361.330
+MN  - N1.824.308.125
+MN  - N6.850.505.400.400.580
+MS  - Structural nature of relationships among members of a household typically in reference to a MINOR residing in the same home. More broadly any organizational framework that determines family membership, and the functions and hierarchical position of family members (https://eric.ed.gov/?qt=Family+Structure&ti=Family+Structure).
+HN  - 2023; for STEPFAMILY and FAMILY, RECONSTITUTED use FAMILY 1996-2022; for MATRIARCHY and PATRIARCHY use FAMILY CHARACTERISTICS 1995-2022
+BX  - Family, Reconstituted
+BX  - Reconstituted Family
+BX  - Step-parent Family
+BX  - Stepfamily
+BX  - Stepparent Family
