@@ -19,7 +19,6 @@ from .downloader import LCSHDownloader, MeSHDownloader
 from .reader import MeSHReader, read_jsonl, topic_filter
 from .writer import write_jsonl
 
-
 @click.group()
 def main():
     """A subjects CLI utility (mostly for InvenioRDM)."""

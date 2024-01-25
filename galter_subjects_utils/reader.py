@@ -9,6 +9,7 @@
 """MeSH term loader."""
 
 import json
+import re
 
 
 class MeSH:
@@ -27,6 +28,7 @@ class MeSH:
                 key, value = [p.strip() for p in line.split("=", maxsplit=1)]
                 cls.update_record(record, key, value)
 
+                # Assumes always ends with UI
                 if key == "UI":
                     if filter(record):
                         yield record
@@ -56,6 +58,10 @@ class MeSHReader:
         """Iterate over terms."""
         yield from MeSH.load(self._filepath, self._filter)
 
+    def read(self):
+        """Alias for __iter__ (for now)."""
+        yield from self
+
 
 def topic_filter(record):
     """Filters for topical terms."""
@@ -67,3 +73,105 @@ def read_jsonl(filepath):
     with open(filepath) as f:
         for line in f:
             yield json.loads(line)
+
+
+def mapping_by(iterable, by, keys=None):
+    """Return dict out of `iterable` mapped by `by` with only `keys` chosen.
+
+    If multiple entries in iterable have same `by` value, the last one will
+    take precedence.
+
+    :param iterable: iterable of dict
+    :param by: key used to group
+    :param keys: keys of each dict in iterable that should be kept
+                 (with their values)
+    :return: dict
+    """
+    return {
+        d.get(by): {k: d.get(k) for k in keys} if keys else d
+        for d in iterable
+    }
+
+
+class MeSHNewReader:
+    """Parser for MeSH new file."""
+
+    def __init__(self, filepath):
+        """Constructor."""
+        self.filepath = filepath
+
+    def read(self):
+        """Read iteratively 'meshnew' file.
+
+        This is a very simple parser that takes advantage of the
+        structure of 'meshnew' files.
+
+        Design:
+        - lazy load file to reduce memory footprint during read
+        """
+        with open(self.filepath, 'r') as f:
+            entry = {}
+            for line in f:
+                line = line.strip()
+                # partition always yields 3-tuple, values may be '' though
+                lv, dash, rv = line.partition("-")
+                if dash == "-":
+                    entry.update({lv.strip(): rv.strip()})
+                else:
+                    if entry:
+                        yield entry
+                        entry = {}
+            if entry:
+                yield entry
+
+
+class MeSHReplaceReader:
+    """Parser for MeSH replace file."""
+
+    def __init__(self, filepath):
+        """Constructor."""
+        self.filepath = filepath
+
+    def read(self):
+        """Read 'replace' file.
+
+        This is a very simple parser that takes advantage of the
+        structure of 'replace' files.
+
+        Design:
+        - lazy load file to reduce memory footprint during read
+        """
+        with open(self.filepath, 'r') as f:
+            entry = {}
+            for line in f:
+                line = line.strip()
+                valid_start = (
+                    line.startswith("MH OLD =") or
+                    line.startswith("MH NEW =")
+                )
+                if valid_start:
+                    lv, eq, rv = line.partition("=")
+                    lv = lv.strip()
+                    rv = rv.strip()
+
+                    if line.startswith("MH OLD ="):
+                        m = re.search(r"(#?) \[(\w\*?)?\]$", rv)
+                        if not m:
+                            raise Exception(f"Malformed line: {line}")
+                        piece = {
+                            lv: rv[:m.start()].strip(),
+                            "delete": m.group(1) or "",
+                            "status": m.group(2) or "",
+                        }
+                    else:
+                        piece = {lv: rv}
+
+                    entry.update(piece)
+
+                else:
+                    if entry:
+                        yield entry
+                        entry = {}
+
+            if entry:
+                yield entry
