@@ -70,7 +70,16 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = '--isort --pydocstyle --pycodestyle --doctest-glob="*.rst" --doctest-modules --cov=galter_subjects_utils --cov-report=term-missing'
+addopts = [
+    "--isort",
+    "--pydocstyle",
+    "--pycodestyle",
+    "--doctest-glob='*.rst'",
+    "--doctest-modules",
+    "--cov=galter_subjects_utils",
+    "--cov-report=term-missing",
+    "--import-mode=importlib",
+]
 testpaths = ["tests", "galter_subjects_utils"]
 
 [tool.pydocstyle]
