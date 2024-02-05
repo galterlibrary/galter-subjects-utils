@@ -149,6 +149,14 @@ class MeSHReplaceReader:
 
         Design:
         - lazy load file to reduce memory footprint during read
+        Output:
+            yield
+            {
+                "MH OLD": "...",
+                "MH NEW": "...",
+                "delete": "...",
+                "status": "...",
+            }
         """
         with open(self.filepath, 'r') as f:
             entry = {}

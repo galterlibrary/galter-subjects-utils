@@ -9,7 +9,7 @@
 """Test general reader functionality."""
 
 
-from galter_subjects_utils.reader import mapping_by
+from galter_subjects_utils.reader import get_rdm_subjects, mapping_by
 
 
 def test_mapping_by():
@@ -70,3 +70,40 @@ def test_mapping_by():
         }
     }
     assert expected == mapping
+
+
+def test_get_rdm_subjects(running_app, create_subject_data):
+    subjects = [
+        create_subject_data(
+            input_={
+                "id": "http://example.org/foo/0",
+                "scheme": "foo",
+                "subject": "0",
+            }
+        ),
+        create_subject_data(
+            input_={
+                "id": "http://example.org/foo/1",
+                "scheme": "foo",
+                "subject": "1",
+            },
+        ),
+        create_subject_data(
+            input_={
+                "id": "http://example.org/foo/2",
+                "scheme": "foo",
+                "subject": "2",
+            },
+        ),
+        create_subject_data(
+            input_={
+                "id": "http://example.org/bar/0",
+                "scheme": "bar",
+                "subject": "0",
+            },
+        )
+    ]
+
+    subjects = [s for s in get_rdm_subjects(scheme="foo")]
+    assert 3 == len(subjects)
+    assert {"0", "1", "2"} == {e["subject"] for e in subjects}
