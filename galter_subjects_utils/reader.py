@@ -10,6 +10,10 @@
 
 import json
 
+from invenio_db import db
+from invenio_vocabularies.contrib.subjects.models import SubjectsMetadata
+from sqlalchemy import bindparam, select, text
+
 
 def read_jsonl(filepath):
     """KISS jsonl file reader."""
@@ -34,3 +38,24 @@ def mapping_by(iterable, by, keys=None):
         d.get(by): {k: d.get(k) for k in keys} if keys else d
         for d in iterable
     }
+
+
+def get_rdm_subjects(scheme):
+    """Return all rdm subjects of corresponding scheme."""
+
+    is_scheme = (
+        text('json::json->>\'scheme\' = :scheme')
+        .bindparams(
+            bindparam(
+                "scheme",
+                value=scheme,
+            )
+        )
+    )
+
+    stmt = (
+        select(SubjectsMetadata.json)
+        .where(is_scheme)
+    )
+
+    return db.session.scalars(stmt)

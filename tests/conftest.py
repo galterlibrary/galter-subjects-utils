@@ -172,3 +172,34 @@ def create_record_data(running_app, minimal_record_input):
         return record_result._record
 
     return _create_record_data
+
+
+@pytest.fixture(scope="function")
+def minimal_subject_input():
+    """Minimal subject input dict."""
+    return {
+        "id": "http://example.org/foo/0",
+        "scheme": "foo",
+        "subject": "0",
+    }
+
+
+@pytest.fixture(scope="function")
+def create_subject_data(running_app, db, search, minimal_subject_input):
+    """Create data-layer subjects."""
+    subjects_service = current_service_registry.get("subjects")
+
+    def _create_subject_data(
+        identity=None,
+        input_=None
+    ):
+        """Create a data-layer subject."""
+        identity = identity or system_identity
+        input_ = input_ or minimal_subject_input
+        result = subjects_service.create(
+            identity,
+            input_
+        )
+        return result._record
+
+    return _create_subject_data
