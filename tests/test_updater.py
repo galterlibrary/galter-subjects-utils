@@ -18,6 +18,7 @@ from invenio_records_resources.proxies import current_service_registry
 from invenio_vocabularies.contrib.subjects.api import Subject
 
 from galter_subjects_utils.updater import SubjectDeltaUpdater
+from galter_subjects_utils.writer import SubjectDeltaLogger
 
 
 # Fixtures
@@ -125,14 +126,22 @@ def records_data_w_subjects(create_record_data, minimal_record_input):
 
 
 @pytest.fixture(scope="module")
+def delta_logger():
+    """Log record deltas."""
+    return SubjectDeltaLogger()
+
+
+@pytest.fixture(scope="module")
 def update_result(
-        running_app, subjects, records_data_w_subjects, operations_data):
+    running_app, subjects, records_data_w_subjects, operations_data,
+    delta_logger
+):
     """Update results.
 
     This is actually the code under test. Because it does a lot, we create
     multiple tests that all test different aspects of its run.
     """
-    executor = SubjectDeltaUpdater(operations_data)
+    executor = SubjectDeltaUpdater(operations_data, delta_logger)
     result = executor.update()
 
     # Really just needed for tests: OS indices are refreshed on an interval
@@ -252,4 +261,25 @@ def test_update_on_records(update_result, records_data_w_subjects):
     assert 0 == len(subjects)  # only had the one removed subject
 
 
-# def test_update_output(running_app, subjects):
+def test_update_logging(update_result, delta_logger, records_data_w_subjects):
+    log_entries = delta_logger.read()
+
+    record_pid_0 = records_data_w_subjects[0].pid.pid_value
+    r0_log_entry = next(
+        (e for e in log_entries if e.get("pid") == record_pid_0),
+        None
+    )
+    assert r0_log_entry and r0_log_entry["time"]
+    assert "" == r0_log_entry["error"]
+    r0_delta = "http://example.org/foo/2 -> http://example.org/foo/4"
+    assert r0_delta == r0_log_entry["deltas"]
+
+    record_pid_1 = records_data_w_subjects[1].pid.pid_value
+    r1_log_entry = next(
+        (e for e in log_entries if e.get("pid") == record_pid_1),
+        None
+    )
+    assert r1_log_entry["time"]
+    assert "" == r1_log_entry["error"]
+    r1_delta = "http://example.org/foo/0 -> X"
+    assert r1_delta == r1_log_entry["deltas"]
