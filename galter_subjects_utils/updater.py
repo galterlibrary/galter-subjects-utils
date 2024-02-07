@@ -44,6 +44,7 @@ def op_remove(subjects, op_data):
     if idx == -1:
         return
     subjects.pop(idx)
+    return True
 
 
 def op_replace(subjects, op_data):
@@ -72,29 +73,39 @@ def op_replace(subjects, op_data):
         "id": op_data["new_id"],
     }
     subjects[idx] = new_subject_dict
+    return True
 
 
-def apply_op_data_change(record, op_data):
+def apply_op_data_change(record, op_data, logger):
     """Apply operation change on record."""
     subjects = record["metadata"]["subjects"]
+    applied = False
     if op_data.get("type") == "replace":
-        op_replace(subjects, op_data)
+        applied = op_replace(subjects, op_data)
     elif op_data.get("type") == "remove":
-        op_remove(subjects, op_data)
+        applied = op_remove(subjects, op_data)
+
+    if applied:
+        logger.log(record.pid.pid_value, delta=op_data)
 
 
-def update_rdm_record(record, ops_data):
+def update_rdm_record(record, ops_data, logger):
     """Apply changes to record's subjects."""
     for op_data in ops_data:
-        apply_op_data_change(record, op_data)
+        apply_op_data_change(record, op_data, logger)
 
     records_service = current_service_registry.get("records")
     commit_op = RecordCommitOp(record, records_service.indexer)
     # the following on_register, on_commit don't use the uow object
     # so passing None is fine
     fake_uow = None
-    commit_op.on_register(fake_uow)  # commits to DB
-    commit_op.on_commit(fake_uow)  # reindexes in index
+    try:
+        commit_op.on_register(fake_uow)  # commits to DB
+        commit_op.on_commit(fake_uow)  # reindexes in index
+    except Exception as e:
+        logger.log(record.pid.pid_value, error=str(e))
+    finally:
+        logger.flush()
 
 
 def get_records_to_update(ops_data):
@@ -144,9 +155,10 @@ def get_records_to_update(ops_data):
 class SubjectDeltaUpdater:
     """Translates delta operations into actual changes."""
 
-    def __init__(self, ops_data):
+    def __init__(self, ops_data, logger):
         """Constructor."""
         self._ops_data = ops_data
+        self._logger = logger
 
     def update(self):
         """Execute changes."""
@@ -189,7 +201,7 @@ class SubjectDeltaUpdater:
     def _update_rdm_records(self):
         """Execute operations (replace/remove) on RDM records."""
         for record in get_records_to_update(self._ops_data):
-            update_rdm_record(record, self._ops_data)
+            update_rdm_record(record, self._ops_data, self._logger)
 
     def _remove_rdm_subjects(self):
         """Remove subjects from the Subjects entries."""
