@@ -23,7 +23,7 @@ classifiers = [
 dependencies = [
     "click>=7.0,<9.0",
     "invenio-access>=1.4.4,<2.0.0",
-    "invenio-db[postgresql]>=1.1.5,<2.0.0",
+    "invenio-db[postgresql]>=1.0.14,<1.1.0",
     # invenio-db provides sqlalchemy & co
     "invenio-i18n<2.0.0",  # required for v11
     "invenio-rdm-records[opensearch2]>=1.1.0,<2.0.0",
@@ -53,6 +53,11 @@ dev = [
     "pytest-invenio>=2.1.1,<3.0.0",
     # pytest-invenio includes pytest & co and docker-services-cli
 ]
+
+
+[project.entry-points."flask.commands"]
+galter_subjects = "galter_subjects_utils.cli:main"
+
 
 # Only setuptools usage
 [tool.setuptools]

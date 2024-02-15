@@ -31,6 +31,15 @@ def write_jsonl(
     return filepath
 
 
+def write_csv(entries, filepath, writer_kwargs=None):
+    """Write to CSV."""
+    writer_kwargs = writer_kwargs or {}
+    with open(filepath, "w") as f:
+        writer = csv.DictWriter(f, **writer_kwargs)
+        writer.writeheader()
+        writer.writerows(entries)
+
+
 class SubjectDeltaLogger:
     """Convenience logger for delta operations applied to records."""
 
