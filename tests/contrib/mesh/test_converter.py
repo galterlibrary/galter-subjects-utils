@@ -186,9 +186,10 @@ def test_converter_rename():
 
     expected = [
         {
-            "type": "rename",
             "id": "https://id.nlm.nih.gov/mesh/D017394",
+            "type": "rename",
             "scheme": "MeSH",
+            "subject": "RNA, Guide",
             "new_subject": "RNA, Guide, Kinetoplastida"
         },
     ]
@@ -223,21 +224,23 @@ def test_converter_replace():
     expected = [
         # contains add operation since replacement is new
         {
-            "type": "add",
             "id": "https://id.nlm.nih.gov/mesh/foo-after",
+            "type": "add",
             "scheme": "MeSH",
             "subject": "Foo after"
         },
         {
-            "type": "replace",
             "id": "https://id.nlm.nih.gov/mesh/D000086562Q000145",
+            "type": "replace",
             "scheme": "MeSH",
+            "subject": "American Indians or Alaska Natives/classification",
             "new_id": "https://id.nlm.nih.gov/mesh/D044467Q000145"
         },
         {
-            "type": "replace",
             "id": "https://id.nlm.nih.gov/mesh/foo-before",
+            "type": "replace",
             "scheme": "MeSH",
+            "subject": "Foo before",
             "new_id": "https://id.nlm.nih.gov/mesh/foo-after"
         },
     ]
@@ -256,9 +259,10 @@ def test_converter_remove():
 
     expected = [
         {
-            "type": "remove",
             "id": "https://id.nlm.nih.gov/mesh/" + subject.id,
+            "type": "remove",
             "scheme": "MeSH",
+            "subject": "Epigenesis, Genetic/ethics",
         },
     ]
     assert expected == ops
