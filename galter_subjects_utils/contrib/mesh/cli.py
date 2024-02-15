@@ -13,13 +13,16 @@ from functools import wraps
 from pathlib import Path
 
 import click
+from flask.cli import with_appcontext
 
-from galter_subjects_utils.reader import mapping_by
-from galter_subjects_utils.writer import write_jsonl
+from galter_subjects_utils.reader import mapping_by, get_rdm_subjects
+from galter_subjects_utils.writer import write_csv, write_jsonl
 
-from .converter import MeSHRDMConverter
+from .adapter import converted_to_subjects, generate_replacements
+from .converter import MeSHRDMConverter, MeSHSubjectDeltasConverter
 from .downloader import MeSHDownloader
-from .reader import MeSHReader, topic_filter
+from .reader import MeSHReader, MeSHReplaceReader, topic_filter
+
 
 defaults = {
     "year": date.today().year,
@@ -129,3 +132,80 @@ def mesh_file(**parameters):
     filepath = write_jsonl(converter.convert(), parameters["output_file"])
 
     print(f"MeSH terms written here {filepath}")
+
+
+@mesh.command("deltas")
+@click.option(
+    "--downloads-dir", "-d",
+    type=click.Path(path_type=Path),
+    default=defaults["downloads-dir"])
+@click.option("--year", "-y", type=int, default=defaults["year"])
+@click.option(
+    "--filter", "-f",
+    type=click.Choice(["topic", "topic-qualifier"]),
+    default=defaults["filter"],
+)
+@with_appcontext
+def mesh_deltas(**parameters):
+    """Write MeSH subject delta operations to file."""
+
+    downloads_dir = parameters["downloads_dir"].expanduser()
+    year = parameters["year"]
+    filter_ = parameters["filter"]
+
+    # Source subjects
+    subject_rdm_preexisting = get_rdm_subjects(scheme="MeSH")
+    src = converted_to_subjects(subject_rdm_preexisting)
+
+    # Destination subjects
+    subjects_fp = downloads_dir / f"d{year}.bin"
+    topics = MeSHReader(subjects_fp, filter=topic_filter).read()
+
+    if filter_ == "topic-qualifier":
+        qualifiers_fp = downloads_dir / f"q{year}.bin"
+        qualifiers_mapping = mapping_by(
+            MeSHReader(qualifiers_fp).read(),
+            by="QA"
+        )
+    else:
+        qualifiers_mapping = {}
+
+    converted = MeSHRDMConverter(topics, qualifiers_mapping).convert()
+    dst = converted_to_subjects(converted)
+
+    # Replacements
+    replace_fp = downloads_dir / f"replace{year}.txt"
+    replacements = generate_replacements(
+        MeSHReplaceReader(replace_fp).read()
+    )
+
+    ops = (
+        MeSHSubjectDeltasConverter(
+            src_subjects=src,
+            dst_subjects=dst,
+            replacements=replacements
+        )
+        .convert()
+    )
+
+    pwd = Path.cwd()
+    deltas_fp = pwd / f"deltas_{year}.csv"
+    header = [
+        "id",
+        "type",
+        "scheme",
+        "subject",
+        "new_id",
+        "new_subject",
+        "keep_trace"
+    ]
+    write_csv(
+        ops,
+        deltas_fp,
+        writer_kwargs={
+            "fieldnames": header
+        }
+    )
+
+    print(f"MeSH deltas written here {deltas_fp}")
+

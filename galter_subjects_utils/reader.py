@@ -8,6 +8,7 @@
 
 """Generic reader functionality."""
 
+import csv
 import json
 
 from invenio_db import db
@@ -20,6 +21,14 @@ def read_jsonl(filepath):
     with open(filepath) as f:
         for line in f:
             yield json.loads(line)
+
+
+def read_csv(filepath, reader_kwargs=None):
+    """KISS csv reader."""
+    reader_kwargs = reader_kwargs or {}
+    with open(filepath) as f:
+        reader = csv.DictReader(f, **reader_kwargs)
+        yield from reader
 
 
 def mapping_by(iterable, by, keys=None):
@@ -42,7 +51,6 @@ def mapping_by(iterable, by, keys=None):
 
 def get_rdm_subjects(scheme):
     """Return all rdm subjects of corresponding scheme."""
-
     is_scheme = (
         text('json::json->>\'scheme\' = :scheme')
         .bindparams(
