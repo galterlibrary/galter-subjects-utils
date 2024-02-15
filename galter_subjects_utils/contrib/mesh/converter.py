@@ -195,7 +195,8 @@ class MeSHSubjectDeltasConverter:
                 "scheme": self.scheme,
                 "id": generate_id(a.id),
                 "subject": a.label
-            } for a in self._additions
+            }
+            for a in self._additions
         )
 
         # Renames
@@ -203,10 +204,11 @@ class MeSHSubjectDeltasConverter:
             {
                 "type": "rename",
                 "scheme": self.scheme,
-                "id": generate_id(id_),
+                "id": generate_id(analysis.id),
+                "subject": label,
                 "new_subject": analysis.relabelled
             }
-            for id_, analysis in self._id_to_analysis.items()
+            for label, analysis in self._label_to_analysis.items()
             if analysis.relabelled
         )
 
@@ -215,10 +217,11 @@ class MeSHSubjectDeltasConverter:
             {
                 "type": "replace",
                 "scheme": self.scheme,
-                "id": generate_id(id_),
+                "id": generate_id(analysis.id),
+                "subject": label,
                 "new_id": generate_id(analysis.replaced)
             }
-            for id_, analysis in self._id_to_analysis.items()
+            for label, analysis in self._label_to_analysis.items()
             if analysis.replaced
         )
 
@@ -227,8 +230,10 @@ class MeSHSubjectDeltasConverter:
             {
                 "type": "remove",
                 "scheme": self.scheme,
-                "id": generate_id(id_),
-            } for id_, analysis in self._id_to_analysis.items()
+                "id": generate_id(analysis.id),
+                "subject": label
+            }
+            for label, analysis in self._label_to_analysis.items()
             if not analysis.seen and not analysis.replaced
         )
 
