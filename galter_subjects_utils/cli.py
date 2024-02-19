@@ -12,12 +12,14 @@ from datetime import date
 from pathlib import Path
 
 import click
+from flask.cli import with_appcontext
 
 from .contrib.mesh.cli import mesh
 from .converter import LCSHRDMConverter
 from .downloader import LCSHDownloader
-from .reader import read_jsonl
-from .writer import write_jsonl
+from .reader import read_csv, read_jsonl
+from .updater import KeepTrace, SubjectDeltaUpdater
+from .writer import SubjectDeltaLogger, write_jsonl
 
 
 @click.group()
@@ -79,3 +81,33 @@ def lcsh(**parameters):
     filepath = write_jsonl(converter, parameters["output_file"])
 
     print(f"LCSH terms written here {filepath}")
+
+
+keep_trace_field_help = "Dotted field path to where trace should be kept."
+keep_trace_tmpl_help = "Template with expandable '{subject}' to be saved."
+
+
+@main.command("update")
+@click.argument(
+    "deltas-file",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False),
+)
+@click.option(
+    "--output-file", "-o",
+    type=click.Path(path_type=Path),
+    default=defaults["output-file"] / "updated_records.csv",
+)
+@click.option("--keep-trace-field", "-f", help=keep_trace_field_help)
+@click.option("--keep-trace-template", "-t", help=keep_trace_tmpl_help)
+@with_appcontext
+def update_subjects(**parameters):
+    """Update subjects in running instance according to deltas file."""
+    deltas = [d for d in read_csv(parameters["deltas_file"])]
+    logger = SubjectDeltaLogger(filepath=parameters["output_file"])
+    updater = SubjectDeltaUpdater(deltas, logger)
+    keep_trace = KeepTrace(
+        field=parameters.get("keep_trace_field") or None,
+        template=parameters.get("keep_trace_template") or None
+    )
+    updater.update(keep_trace)
+    print(f"Updated subjects")
