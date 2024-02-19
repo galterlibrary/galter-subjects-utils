@@ -15,14 +15,13 @@ from pathlib import Path
 import click
 from flask.cli import with_appcontext
 
-from galter_subjects_utils.reader import mapping_by, get_rdm_subjects
+from galter_subjects_utils.reader import get_rdm_subjects, mapping_by
 from galter_subjects_utils.writer import write_csv, write_jsonl
 
 from .adapter import converted_to_subjects, generate_replacements
 from .converter import MeSHRDMConverter, MeSHSubjectDeltasConverter
 from .downloader import MeSHDownloader
 from .reader import MeSHReader, MeSHReplaceReader, topic_filter
-
 
 defaults = {
     "year": date.today().year,
@@ -148,7 +147,6 @@ def mesh_file(**parameters):
 @with_appcontext
 def mesh_deltas(**parameters):
     """Write MeSH subject delta operations to file."""
-
     downloads_dir = parameters["downloads_dir"].expanduser()
     year = parameters["year"]
     filter_ = parameters["filter"]
@@ -208,4 +206,3 @@ def mesh_deltas(**parameters):
     )
 
     print(f"MeSH deltas written here {deltas_fp}")
-

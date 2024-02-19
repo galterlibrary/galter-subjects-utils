@@ -17,7 +17,7 @@ from invenio_rdm_records.records import RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_vocabularies.contrib.subjects.api import Subject
 
-from galter_subjects_utils.updater import SubjectDeltaUpdater
+from galter_subjects_utils.updater import KeepTrace, SubjectDeltaUpdater
 from galter_subjects_utils.writer import SubjectDeltaLogger
 
 
@@ -85,17 +85,20 @@ def operations_data():
             "type": "rename",
             "scheme": "foo",
             "id": "http://example.org/foo/1",
+            "subject": "1",
             "new_subject": "One"
         },
         {
             "type": "remove",
             "scheme": "foo",
             "id": "http://example.org/foo/0",
+            "subject": "0"
         },
         {
             "type": "replace",
             "scheme": "foo",
             "id": "http://example.org/foo/2",
+            "subject": "2",
             "new_id": "http://example.org/foo/4",
             "new_subject": "4"
         },
@@ -141,7 +144,9 @@ def update_result(
     This is actually the code under test. Because it does a lot, we create
     multiple tests that all test different aspects of its run.
     """
-    executor = SubjectDeltaUpdater(operations_data, delta_logger)
+    noop_keep_trace = KeepTrace(None, None)
+    executor = SubjectDeltaUpdater(
+        operations_data, delta_logger, noop_keep_trace)
     result = executor.update()
 
     # Really just needed for tests: OS indices are refreshed on an interval
@@ -153,9 +158,34 @@ def update_result(
 
 
 # Test utilities
-def any_contains(dict_, dicts):
+def any_contains(dicts, dict_):
     """Return bool if any dict in `dicts` contains `dict_`."""
     return any(dict_.items() <= d.items() for d in dicts)
+
+
+def get_subjects_of_record_from_db(pid):
+    """Return DB subjects of record with `pid`."""
+    records_service = current_service_registry.get("records")
+    record_result = records_service.read(system_identity, pid)
+    record_dict = record_result.to_dict()
+    return record_dict["metadata"]["subjects"]
+
+
+def get_records_from_de():
+    """Return DE hits."""
+    records_service = current_service_registry.get("records")
+    record_results = records_service.read_all(system_identity, None)
+    records_dict = record_results.to_dict()
+    return records_dict["hits"]["hits"]
+
+
+def get_subjects_of_record_from_de(records, pid):
+    """Return subjects of record with `pid` in `records` .
+
+    records is the output of `get_records_from_de`.
+    """
+    record_dict = next((r for r in records if r.get("id") == pid), {})
+    return record_dict.get("metadata").get("subjects", [])
 
 
 # Tests
@@ -191,13 +221,13 @@ def test_update_on_subjects(update_result, subjects_service):
     hits = subjects_dict["hits"]["hits"]
 
     # add
-    assert any_contains({"id": "http://example.org/foo/4"}, hits)
+    assert any_contains(hits, {"id": "http://example.org/foo/4"})
     # rename
-    assert any_contains({"subject": "One"}, hits)
+    assert any_contains(hits, {"subject": "One"})
     # remove
-    assert not any_contains({"id": "http://example.org/foo/0"}, hits)
+    assert not any_contains(hits, {"id": "http://example.org/foo/0"})
     # replace
-    assert not any_contains({"id": "http://example.org/foo/2"}, hits)
+    assert not any_contains(hits, {"id": "http://example.org/foo/2"})
 
 
 def test_update_on_records(update_result, records_data_w_subjects):
@@ -207,28 +237,24 @@ def test_update_on_records(update_result, records_data_w_subjects):
     # -----
     # first record
     record_pid_0 = records_data_w_subjects[0].pid.pid_value
-    record_result = records_service.read(system_identity, record_pid_0)
-    record_dict = record_result.to_dict()
-    subjects = record_dict["metadata"]["subjects"]
+    subjects = get_subjects_of_record_from_db(record_pid_0)
     assert 4 == len(subjects)
     # replace
-    assert not any_contains({"id": "http://example.org/foo/2"}, subjects)
-    assert any_contains({"id": "http://example.org/foo/4"}, subjects)
+    assert not any_contains(subjects, {"id": "http://example.org/foo/2"})
+    assert any_contains(subjects, {"id": "http://example.org/foo/4"})
     # rename
     assert any_contains(
+        subjects,
         {"id": "http://example.org/foo/1", "subject": "One"},
-        subjects
     )
     # leave alone
-    assert any_contains({"id": "http://example.org/bar/0"}, subjects)
-    assert any_contains({"subject": "a_keyword"}, subjects)
+    assert any_contains(subjects, {"id": "http://example.org/bar/0"})
+    assert any_contains(subjects, {"subject": "a_keyword"})
 
     # second record
     # remove
     record_pid_1 = records_data_w_subjects[1].pid.pid_value
-    record_result = records_service.read(system_identity, record_pid_1)
-    record_dict = record_result.to_dict()
-    subjects = record_dict["metadata"]["subjects"]
+    subjects = get_subjects_of_record_from_db(record_pid_1)
     assert 0 == len(subjects)  # only had the one removed subject
 
     # at index
@@ -242,16 +268,16 @@ def test_update_on_records(update_result, records_data_w_subjects):
     subjects = record_dict["metadata"]["subjects"]
     assert 4 == len(subjects)
     # replace
-    assert not any_contains({"id": "http://example.org/foo/2"}, subjects)
-    assert any_contains({"id": "http://example.org/foo/4"}, subjects)
+    assert not any_contains(subjects, {"id": "http://example.org/foo/2"})
+    assert any_contains(subjects, {"id": "http://example.org/foo/4"})
     # rename
     assert any_contains(
+        subjects,
         {"id": "http://example.org/foo/1", "subject": "One"},
-        subjects
     )
     # leave alone
-    assert any_contains({"id": "http://example.org/bar/0"}, subjects)
-    assert any_contains({"subject": "a_keyword"}, subjects)
+    assert any_contains(subjects, {"id": "http://example.org/bar/0"})
+    assert any_contains(subjects, {"subject": "a_keyword"})
 
     # second record
     # remove
@@ -283,3 +309,121 @@ def test_update_logging(update_result, delta_logger, records_data_w_subjects):
     assert "" == r1_log_entry["error"]
     r1_delta = "http://example.org/foo/0 -> X"
     assert r1_delta == r1_log_entry["deltas"]
+
+
+def test_update_keep_trace(
+    create_subject_data, minimal_record_input, create_record_data_fn,
+):
+    # Test that keep_trace template is placed in keep_trace field
+    # if subject delta op is marked as keep_trace
+    subjects_data = [
+        create_subject_data(
+            system_identity,
+            {
+                "id": f"http://example.org/baz/{i}",
+                "scheme": "baz",
+                "subject": f"{i}",
+            },
+        )
+        for i in range(3)
+    ]
+    record_input = copy.deepcopy(minimal_record_input)
+    record_input["metadata"]["subjects"] = [
+        {
+            "id": "http://example.org/baz/0",
+        },
+        {
+            "id": "http://example.org/baz/1",
+        }
+    ]
+    record_0_data = create_record_data_fn(system_identity, record_input)
+    record_input = copy.deepcopy(minimal_record_input)
+    record_input["metadata"]["subjects"] = [
+        {
+            "id": "http://example.org/baz/2"
+        }
+    ]
+    record_1_data = create_record_data_fn(system_identity, record_input)
+    delta_ops = [
+        {
+            "type": "remove",
+            "id": "http://example.org/baz/0",
+            "scheme": "baz",
+            "subject": "0",
+            "keep_trace": True,
+        },
+        {
+            "type": "replace",
+            "id": "http://example.org/baz/1",
+            "scheme": "baz",
+            "subject": "1",
+            "new_id": "http://example.org/baz/2",
+            "keep_trace": False,
+        },
+        {
+            "type": "rename",
+            "id": "http://example.org/baz/2",
+            "scheme": "baz",
+            "subject": "2",
+            "new_subject": "Baz-Two",
+            "keep_trace": True,
+        }
+    ]
+    delta_logger = SubjectDeltaLogger()
+    keep_trace = KeepTrace(
+        field="metadata.subjects.subject",
+        template="anything {subject} anything"
+    )
+    # make sure indices are refreshed
+    RDMRecord.index.refresh()
+    Subject.index.refresh()
+
+    updater = SubjectDeltaUpdater(delta_ops, delta_logger, keep_trace)
+    updater.update()
+
+    # at DB
+    # -----
+    # record 0
+    subjects = get_subjects_of_record_from_db(record_0_data.pid.pid_value)
+    assert 2 == len(subjects)
+    # Contains keep_trace template due to removal
+    assert any_contains(subjects, {"subject": "anything 0 anything"})
+    # Doesn't contain keep_trace template due to replacement
+    assert not any_contains(subjects, {"subject": "anything 1 anything"})
+    assert any_contains(subjects, {"id": "http://example.org/baz/2"})
+
+    # record 1
+    subjects = get_subjects_of_record_from_db(record_1_data.pid.pid_value)
+    assert 2 == len(subjects)
+    # Contains keep_trace template due to rename
+    assert any_contains(subjects, {"subject": "anything 2 anything"})
+    assert any_contains(subjects, {"subject": "Baz-Two"})
+
+    # at document engine
+    # ---
+    # This is done for completeness sake, just in case some changes are made
+    # that would inadvertently skip updating the document engine.
+    RDMRecord.index.refresh()
+    records = get_records_from_de()
+
+    # record 0
+    subjects = get_subjects_of_record_from_de(
+        records,
+        record_0_data.pid.pid_value
+    )
+    assert 2 == len(subjects)
+    # Contains keep_trace template due to removal
+    assert any_contains(subjects, {"subject": "anything 0 anything"})
+    # Doesn't contain keep_trace template due to replacement
+    assert not any_contains(subjects, {"subject": "anything 1 anything"})
+    assert any_contains(subjects, {"id": "http://example.org/baz/2"})
+
+    # record 1
+    subjects = get_subjects_of_record_from_de(
+        records,
+        record_1_data.pid.pid_value
+    )
+    assert 2 == len(subjects)
+    # Contains keep_trace template due to rename
+    assert any_contains(subjects, {"subject": "anything 2 anything"})
+    assert any_contains(subjects, {"subject": "Baz-Two"})

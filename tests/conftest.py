@@ -175,6 +175,17 @@ def create_record_data(running_app, minimal_record_input):
 
 
 @pytest.fixture(scope="function")
+def create_record_data_fn(create_record_data, db, search):
+    """Function scoped record creation fixture."""
+
+    def _create_record_data(identity, record_input):
+        """Create a data-layer record."""
+        return create_record_data(identity, record_input)
+
+    return _create_record_data
+
+
+@pytest.fixture(scope="function")
 def minimal_subject_input():
     """Minimal subject input dict."""
     return {
