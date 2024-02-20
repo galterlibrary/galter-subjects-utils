@@ -15,6 +15,7 @@ from pathlib import Path
 import click
 from flask.cli import with_appcontext
 
+from galter_subjects_utils.keeptrace import KeepTrace
 from galter_subjects_utils.reader import get_rdm_subjects, mapping_by
 from galter_subjects_utils.writer import write_csv, write_jsonl
 
@@ -184,6 +185,12 @@ def mesh_deltas(**parameters):
             replacements=replacements
         )
         .convert()
+    )
+    # in-place
+    KeepTrace.mark(
+        ops,
+        # only can keep trace of *those* anyway
+        yes_logic=lambda op: op["type"] in ["rename", "replace", "remove"]
     )
 
     pwd = Path.cwd()
