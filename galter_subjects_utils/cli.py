@@ -17,8 +17,9 @@ from flask.cli import with_appcontext
 from .contrib.mesh.cli import mesh
 from .converter import LCSHRDMConverter
 from .downloader import LCSHDownloader
+from .keeptrace import KeepTrace
 from .reader import read_csv, read_jsonl
-from .updater import KeepTrace, SubjectDeltaUpdater
+from .updater import SubjectDeltaUpdater
 from .writer import SubjectDeltaLogger, write_jsonl
 
 
@@ -104,10 +105,10 @@ def update_subjects(**parameters):
     """Update subjects in running instance according to deltas file."""
     deltas = [d for d in read_csv(parameters["deltas_file"])]
     logger = SubjectDeltaLogger(filepath=parameters["output_file"])
-    updater = SubjectDeltaUpdater(deltas, logger)
     keep_trace = KeepTrace(
         field=parameters.get("keep_trace_field") or None,
         template=parameters.get("keep_trace_template") or None
     )
-    updater.update(keep_trace)
+    updater = SubjectDeltaUpdater(deltas, logger, keep_trace)
+    updater.update()
     print(f"Updated subjects")

@@ -9,14 +9,12 @@
 """Terms updater."""
 
 import copy
-from dataclasses import dataclass
 
 from invenio_access.permissions import system_identity
 from invenio_db import db
 from invenio_rdm_records.records import RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_records_resources.services.uow import RecordCommitOp
-from invenio_search.engine import dsl
 from sqlalchemy import bindparam, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -127,7 +125,7 @@ def update_rdm_record(record, ops_data, logger, keep_trace):
         )
 
         if applied:
-            if op_data.get("keep_trace"):
+            if keep_trace.should_trace(op_data):
                 keep_trace.trace(record, op_data["subject"])
             logger.log(record.pid.pid_value, delta=op_data)
 
@@ -196,50 +194,6 @@ def get_records_to_update(ops_data):
     )
 
     return result
-
-
-@dataclass
-class KeepTrace:
-    """Keeps trace of subject at field in record using template."""
-
-    field: str  # dotted path to field
-    template: str
-
-    def trace(self, record, subject):
-        """Save expanded `self.template` at `self.field` in record."""
-        if not self.field or not self.template or not subject:
-            return
-
-        final_dict = self.find_final_dict(record)
-        self.assign_template(final_dict, subject)
-
-    def find_final_dict(self, record):
-        """Find or create final dict by following `field`."""
-        obj = record
-        keys = self.field.split(".")
-
-        for key in keys[:-1]:
-            got = obj.get(key)
-            if isinstance(got, dict):
-                obj = got
-            elif got is None:
-                new_dict = {}
-                obj[key] = new_dict
-                obj = new_dict
-            elif isinstance(got, list):
-                new_dict = {}
-                got.append(new_dict)
-                obj = new_dict
-            else:
-                break
-
-        assert isinstance(obj, dict), f"KeepTrace.field '{self.field}' is invalid."  # noqa
-        return obj
-
-    def assign_template(self, dict_, subject):
-        """Assign expanded template."""
-        final_key = self.field.split(".")[-1]
-        dict_[final_key] = self.template.format(subject=subject)
 
 
 class SubjectDeltaUpdater:

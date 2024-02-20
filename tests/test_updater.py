@@ -6,7 +6,7 @@
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
 
-"""Conftest."""
+"""Test updater."""
 
 import copy
 
@@ -17,7 +17,8 @@ from invenio_rdm_records.records import RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_vocabularies.contrib.subjects.api import Subject
 
-from galter_subjects_utils.updater import KeepTrace, SubjectDeltaUpdater
+from galter_subjects_utils.keeptrace import KeepTrace
+from galter_subjects_utils.updater import SubjectDeltaUpdater
 from galter_subjects_utils.writer import SubjectDeltaLogger
 
 
@@ -350,7 +351,7 @@ def test_update_keep_trace(
             "id": "http://example.org/baz/0",
             "scheme": "baz",
             "subject": "0",
-            "keep_trace": True,
+            "keep_trace": "Y",
         },
         {
             "type": "replace",
@@ -358,7 +359,7 @@ def test_update_keep_trace(
             "scheme": "baz",
             "subject": "1",
             "new_id": "http://example.org/baz/2",
-            "keep_trace": False,
+            "keep_trace": "N",
         },
         {
             "type": "rename",
@@ -366,7 +367,7 @@ def test_update_keep_trace(
             "scheme": "baz",
             "subject": "2",
             "new_subject": "Baz-Two",
-            "keep_trace": True,
+            "keep_trace": "Y",
         }
     ]
     delta_logger = SubjectDeltaLogger()
