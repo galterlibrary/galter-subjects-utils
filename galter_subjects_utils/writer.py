@@ -78,8 +78,9 @@ class SubjectDeltaLogger:
                 delta_msg = f"{delta['id']} -> {delta['new_id']}"
             elif delta["type"] == "remove":
                 delta_msg = f"{delta['id']} -> X"
+            elif delta["type"] == "rename":
+                delta_msg = f"{delta['id']} {delta['subject']} -> {delta['new_subject']}"  # noqa
             else:
-                # we are only concerned with replace and remove
                 return
 
             self.deltas.append(delta_msg)
