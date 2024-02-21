@@ -103,6 +103,7 @@ keep_trace_tmpl_help = "Template with expandable '{subject}' to be saved."
 @with_appcontext
 def update_subjects(**parameters):
     """Update subjects in running instance according to deltas file."""
+    print(f"Updating subjects...")
     deltas = [d for d in read_csv(parameters["deltas_file"])]
     logger = SubjectDeltaLogger(filepath=parameters["output_file"])
     keep_trace = KeepTrace(

@@ -12,10 +12,12 @@ import copy
 
 from invenio_access.permissions import system_identity
 from invenio_db import db
+from invenio_pidstore.errors import PersistentIdentifierError
+from invenio_pidstore.models import PersistentIdentifier
 from invenio_rdm_records.records import RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_records_resources.services.uow import RecordCommitOp
-from sqlalchemy import bindparam, or_, select, text
+from sqlalchemy import and_, bindparam, delete, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
 
 
@@ -260,7 +262,30 @@ class SubjectDeltaUpdater:
         remove_ops = filter_ops_by_type(self._ops_data, "remove")
         replace_ops = filter_ops_by_type(self._ops_data, "replace")
         for op in remove_ops + replace_ops:
-            service.delete(
-                system_identity,
-                op["id"]
+            try:
+                service.delete(
+                    system_identity,
+                    op["id"]
+                )
+            except PersistentIdentifierError:
+                # For any persistent identifier related problem
+                # we just ignore it and make sure we can continue.
+                # Main scenario is when a subject has already been
+                # "service.delete"'d in which case its PID is only marked as
+                # deleted which interferes with service.delete and
+                # service.create.
+                pass
+
+            # Purge (completely delete) backing subject PID
+            # This operation is idempotent.
+            delete_pid_stmt = (
+                delete(PersistentIdentifier)
+                .where(
+                    and_(
+                        PersistentIdentifier.pid_type == "sub",
+                        PersistentIdentifier.pid_value == op["id"],
+                    )
+                )
             )
+            db.session.execute(delete_pid_stmt)
+            db.session.commit()
