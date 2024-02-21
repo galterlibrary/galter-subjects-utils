@@ -12,7 +12,7 @@ import copy
 
 import pytest
 from invenio_access.permissions import system_identity
-from invenio_pidstore.errors import PIDDeletedError
+from invenio_pidstore.errors import PIDDoesNotExistError
 from invenio_rdm_records.records import RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_vocabularies.contrib.subjects.api import Subject
@@ -207,11 +207,11 @@ def test_update_on_subjects(update_result, subjects_service):
     # what happens with other changes?
 
     # remove
-    with pytest.raises(PIDDeletedError):
+    with pytest.raises(PIDDoesNotExistError):
         subjects_service.read(system_identity, "http://example.org/foo/0")
 
     # replace
-    with pytest.raises(PIDDeletedError):
+    with pytest.raises(PIDDoesNotExistError):
         subjects_service.read(system_identity, "http://example.org/foo/2")
 
     # at index
@@ -298,7 +298,10 @@ def test_update_logging(update_result, delta_logger, records_data_w_subjects):
     )
     assert r0_log_entry and r0_log_entry["time"]
     assert "" == r0_log_entry["error"]
-    r0_delta = "http://example.org/foo/2 -> http://example.org/foo/4"
+    r0_delta = (
+        "http://example.org/foo/1 1 -> One + " +
+        "http://example.org/foo/2 -> http://example.org/foo/4"
+    )
     assert r0_delta == r0_log_entry["deltas"]
 
     record_pid_1 = records_data_w_subjects[1].pid.pid_value
