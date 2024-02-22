@@ -146,26 +146,34 @@ def minimal_record_input():
 
 
 @pytest.fixture(scope="module")
-def create_record_data(running_app, minimal_record_input):
+def create_draft_data(running_app, minimal_record_input):
+    """Draft data-layer fixture."""
+    records_service = current_service_registry.get("records")
+
+    def _create_draft_data(
+        identity=None,
+        record_input=minimal_record_input,
+    ):
+        """Create a data-layer draft record."""
+        identity = identity or system_identity
+        draft_data = records_service.create(identity, record_input)._record
+        return draft_data
+
+    return _create_draft_data
+
+
+@pytest.fixture(scope="module")
+def create_record_data(create_draft_data, minimal_record_input):
     """Record data-layer fixture."""
     record_service = current_service_registry.get("records")
 
     def _create_record_data(
         identity=None,
         record_input=minimal_record_input,
-        community_data=None
     ):
-        """Create a data-layer record.
-
-        Optionally assign it to a community from the get-go
-        """
+        """Create a data-layer record."""
         identity = identity or system_identity
-        draft_data = record_service.create(identity, record_input)._record
-
-        if community_data:
-            draft_data.parent.communities.add(community_data, default=True)
-            draft_data.parent.commit()
-
+        draft_data = create_draft_data(identity, record_input)
         record_result = record_service.publish(
             identity, draft_data.pid.pid_value
         )

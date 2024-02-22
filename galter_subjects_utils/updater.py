@@ -14,11 +14,13 @@ from invenio_access.permissions import system_identity
 from invenio_db import db
 from invenio_pidstore.errors import PersistentIdentifierError
 from invenio_pidstore.models import PersistentIdentifier
-from invenio_rdm_records.records import RDMRecord
+from invenio_rdm_records.records import RDMDraft, RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_records_resources.services.uow import RecordCommitOp
 from sqlalchemy import and_, bindparam, delete, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB
+
+from .keeptrace import KeepTrace
 
 
 def filter_ops_by_type(ops_data, _type):
@@ -146,7 +148,7 @@ def update_rdm_record(record, ops_data, logger, keep_trace):
         logger.flush()
 
 
-def get_records_to_update(ops_data):
+def get_records_to_update(ops_data, data_cls):
     """Return data-layer records to update."""
 
     def get_targeted_ids(ops_data):
@@ -187,12 +189,12 @@ def get_records_to_update(ops_data):
         return []
 
     stmt = (
-        select(RDMRecord.model_cls)
+        select(data_cls.model_cls)
         .where(at_least_1_subject_targeted(targeted_ids))
     )
 
     result = (
-        RDMRecord(obj.data, model=obj) for obj in db.session.scalars(stmt)
+        data_cls(obj.data, model=obj) for obj in db.session.scalars(stmt)
     )
 
     return result
@@ -246,13 +248,24 @@ class SubjectDeltaUpdater:
             )
 
     def _update_rdm_records(self):
-        """Execute operations (replace/remove) on RDM records."""
-        for record in get_records_to_update(self._ops_data):
+        """Execute operations (replace/remove/rename) on RDM records."""
+        entries = get_records_to_update(self._ops_data, data_cls=RDMRecord)
+        for record in entries:
             update_rdm_record(
                 record,
                 ops_data=self._ops_data,
                 logger=self._logger,
                 keep_trace=self._keep_trace
+            )
+
+        # Don't keep trace for drafts
+        entries = get_records_to_update(self._ops_data, data_cls=RDMDraft)
+        for draft in entries:
+            update_rdm_record(
+                draft,
+                ops_data=self._ops_data,
+                logger=self._logger,
+                keep_trace=KeepTrace(None, None)  # noop KeepTrace
             )
 
     def _remove_rdm_subjects(self):
