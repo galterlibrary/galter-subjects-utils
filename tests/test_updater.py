@@ -13,7 +13,7 @@ import copy
 import pytest
 from invenio_access.permissions import system_identity
 from invenio_pidstore.errors import PIDDoesNotExistError
-from invenio_rdm_records.records import RDMRecord
+from invenio_rdm_records.records import RDMDraft, RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_vocabularies.contrib.subjects.api import Subject
 
@@ -107,7 +107,9 @@ def operations_data():
 
 
 @pytest.fixture(scope="module")
-def records_data_w_subjects(create_record_data, minimal_record_input):
+def records_data_w_subjects(
+    create_draft_data, create_record_data, minimal_record_input
+):
     """Records tagged with subjects."""
     result = []
 
@@ -125,6 +127,13 @@ def records_data_w_subjects(create_record_data, minimal_record_input):
         {"id": "http://example.org/foo/0"},  # will be removed
     ]
     result += [create_record_data(system_identity, record_input)]
+
+    # draft
+    record_input = copy.deepcopy(minimal_record_input)
+    record_input["metadata"]["subjects"] = [
+        {"id": "http://example.org/foo/2"},  # will be replaced
+    ]
+    result += [create_draft_data(system_identity, record_input)]
 
     return result
 
@@ -152,6 +161,7 @@ def update_result(
 
     # Really just needed for tests: OS indices are refreshed on an interval
     # longer than the queries we make in tests, so we have to force a refresh.
+    RDMDraft.index.refresh()
     RDMRecord.index.refresh()
     Subject.index.refresh()
 
@@ -164,18 +174,26 @@ def any_contains(dicts, dict_):
     return any(dict_.items() <= d.items() for d in dicts)
 
 
-def get_subjects_of_record_from_db(pid):
+def get_subjects_of_record_from_db(pid, draft=False):
     """Return DB subjects of record with `pid`."""
     records_service = current_service_registry.get("records")
-    record_result = records_service.read(system_identity, pid)
+    record_result = (
+        records_service.read_draft(system_identity, pid)
+        if draft else
+        records_service.read(system_identity, pid)
+    )
     record_dict = record_result.to_dict()
     return record_dict["metadata"]["subjects"]
 
 
-def get_records_from_de():
+def get_records_from_de(draft=False):
     """Return DE hits."""
     records_service = current_service_registry.get("records")
-    record_results = records_service.read_all(system_identity, None)
+    record_results = (
+        records_service.search_drafts(system_identity)
+        if draft else
+        records_service.search(system_identity)
+    )
     records_dict = record_results.to_dict()
     return records_dict["hits"]["hits"]
 
@@ -232,13 +250,13 @@ def test_update_on_subjects(update_result, subjects_service):
 
 
 def test_update_on_records(update_result, records_data_w_subjects):
-    records_service = current_service_registry.get("records")
+    # update_result is under test
 
     # at DB
     # -----
     # first record
-    record_pid_0 = records_data_w_subjects[0].pid.pid_value
-    subjects = get_subjects_of_record_from_db(record_pid_0)
+    pid_0 = records_data_w_subjects[0].pid.pid_value
+    subjects = get_subjects_of_record_from_db(pid_0)
     assert 4 == len(subjects)
     # replace
     assert not any_contains(subjects, {"id": "http://example.org/foo/2"})
@@ -253,20 +271,16 @@ def test_update_on_records(update_result, records_data_w_subjects):
     assert any_contains(subjects, {"subject": "a_keyword"})
 
     # second record
+    pid_1 = records_data_w_subjects[1].pid.pid_value
+    subjects = get_subjects_of_record_from_db(pid_1)
     # remove
-    record_pid_1 = records_data_w_subjects[1].pid.pid_value
-    subjects = get_subjects_of_record_from_db(record_pid_1)
     assert 0 == len(subjects)  # only had the one removed subject
 
-    # at index
+    # at document engine
     # --------
-    record_results = records_service.read_all(system_identity, None)
-    records_dict = record_results.to_dict()
-    hits = records_dict["hits"]["hits"]
+    records = get_records_from_de()
     # first record
-    record_dict = next((r for r in hits if r.get("id") == record_pid_0), None)
-    assert record_dict
-    subjects = record_dict["metadata"]["subjects"]
+    subjects = get_subjects_of_record_from_de(records, pid_0)
     assert 4 == len(subjects)
     # replace
     assert not any_contains(subjects, {"id": "http://example.org/foo/2"})
@@ -281,38 +295,65 @@ def test_update_on_records(update_result, records_data_w_subjects):
     assert any_contains(subjects, {"subject": "a_keyword"})
 
     # second record
+    subjects = get_subjects_of_record_from_de(records, pid_1)
     # remove
-    record_dict = next((r for r in hits if r.get("id") == record_pid_1), None)
-    assert record_dict
-    subjects = record_dict["metadata"]["subjects"]
     assert 0 == len(subjects)  # only had the one removed subject
+
+
+def test_update_on_drafts(update_result, records_data_w_subjects):
+    # update_result is under test
+
+    # at DB
+    # -----
+    pid = records_data_w_subjects[2].pid.pid_value
+    subjects = get_subjects_of_record_from_db(pid, draft=True)
+    assert not any_contains(subjects, {"id": "http://example.org/foo/2"})
+    assert any_contains(subjects, {"id": "http://example.org/foo/4"})
+
+    # at document engine
+    # ---
+    records = get_records_from_de(draft=True)
+    subjects = get_subjects_of_record_from_de(records, pid)
+    # Drafts don't keep trace
+    assert 1 == len(subjects)
+    assert any_contains(subjects, {"id": "http://example.org/foo/4"})
 
 
 def test_update_logging(update_result, delta_logger, records_data_w_subjects):
     log_entries = delta_logger.read()
 
-    record_pid_0 = records_data_w_subjects[0].pid.pid_value
-    r0_log_entry = next(
-        (e for e in log_entries if e.get("pid") == record_pid_0),
-        None
-    )
-    assert r0_log_entry and r0_log_entry["time"]
-    assert "" == r0_log_entry["error"]
-    r0_delta = (
+    # record 0 logging
+    pid = records_data_w_subjects[0].pid.pid_value
+    log_entry = next((e for e in log_entries if e.get("pid") == pid), None)
+    assert log_entry and log_entry["time"]
+    assert "" == log_entry["error"]
+    msg = (
         "http://example.org/foo/1 1 -> One + " +
         "http://example.org/foo/2 -> http://example.org/foo/4"
     )
-    assert r0_delta == r0_log_entry["deltas"]
+    assert msg == log_entry["deltas"]
 
-    record_pid_1 = records_data_w_subjects[1].pid.pid_value
-    r1_log_entry = next(
-        (e for e in log_entries if e.get("pid") == record_pid_1),
+    # record 1 logging
+    pid = records_data_w_subjects[1].pid.pid_value
+    log_entry = next(
+        (e for e in log_entries if e.get("pid") == pid),
         None
     )
-    assert r1_log_entry["time"]
-    assert "" == r1_log_entry["error"]
-    r1_delta = "http://example.org/foo/0 -> X"
-    assert r1_delta == r1_log_entry["deltas"]
+    assert log_entry["time"]
+    assert "" == log_entry["error"]
+    msg = "http://example.org/foo/0 -> X"
+    assert msg == log_entry["deltas"]
+
+    # draft logging
+    pid = records_data_w_subjects[2].pid.pid_value
+    log_entry = next(
+        (e for e in log_entries if e.get("pid") == pid),
+        None
+    )
+    assert log_entry and log_entry["time"]
+    assert "" == log_entry["error"]
+    msg = "http://example.org/foo/2 -> http://example.org/foo/4"
+    assert msg == log_entry["deltas"]
 
 
 def test_update_keep_trace(
