@@ -105,11 +105,12 @@ def update_subjects(**parameters):
     """Update subjects in running instance according to deltas file."""
     print(f"Updating subjects...")
     deltas = [d for d in read_csv(parameters["deltas_file"])]
-    logger = SubjectDeltaLogger(filepath=parameters["output_file"])
+    log_filepath = parameters["output_file"]
+    logger = SubjectDeltaLogger(filepath=log_filepath)
     keep_trace = KeepTrace(
         field=parameters.get("keep_trace_field") or None,
         template=parameters.get("keep_trace_template") or None
     )
     updater = SubjectDeltaUpdater(deltas, logger, keep_trace)
     updater.update()
-    print(f"Updated subjects")
+    print(f"Log of updated records written here {log_filepath}")

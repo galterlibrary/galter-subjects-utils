@@ -145,9 +145,15 @@ def mesh_file(**parameters):
     type=click.Choice(["topic", "topic-qualifier"]),
     default=defaults["filter"],
 )
+@click.option(
+    "--output-file", "-o",
+    type=click.Path(path_type=Path),
+    default=defaults["output-file"] / "deltas.csv",
+)
 @with_appcontext
 def mesh_deltas(**parameters):
     """Write MeSH subject delta operations to file."""
+    print("Generating deltas...")
     downloads_dir = parameters["downloads_dir"].expanduser()
     year = parameters["year"]
     filter_ = parameters["filter"]
@@ -193,8 +199,7 @@ def mesh_deltas(**parameters):
         yes_logic=lambda op: op["type"] in ["rename", "replace", "remove"]
     )
 
-    pwd = Path.cwd()
-    deltas_fp = pwd / f"deltas_{year}.csv"
+    deltas_fp = parameters["output_file"]
     header = [
         "id",
         "type",
