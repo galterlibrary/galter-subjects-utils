@@ -78,7 +78,7 @@ class MeSHReader:
         with open(self._filepath, 'r') as f:
             record = {}
 
-            for line in f.readlines():
+            for line in f:
                 if "=" not in line:
                     continue
 

@@ -129,7 +129,14 @@ def mesh_file(**parameters):
     converter = MeSHRDMConverter(**converter_kwargs)
 
     # Write
-    filepath = write_jsonl(converter.convert(), parameters["output_file"])
+    header = ["id", "scheme", "subject"]
+    filepath = write_csv(
+        converter.convert(),
+        parameters["output_file"],
+        writer_kwargs={
+            "fieldnames": header
+        }
+    )
 
     print(f"MeSH terms written here {filepath}")
 
