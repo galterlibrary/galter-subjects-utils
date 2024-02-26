@@ -39,6 +39,7 @@ def write_csv(entries, filepath, writer_kwargs=None):
         writer.writeheader()
         writer.writerows(entries)
 
+    return filepath
 
 class SubjectDeltaLogger:
     """Convenience logger for delta operations applied to records."""

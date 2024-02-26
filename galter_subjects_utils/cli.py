@@ -68,7 +68,7 @@ def to_lcsh_converter_kwargs(downloader):
 )
 @click.option("--no-cache", default=False)
 def lcsh(**parameters):
-    """Generate new MeSH terms file."""
+    """LCSH related commands."""
     # Download
     downloader_kwargs = to_lcsh_downloader_kwargs(parameters)
     downloader = LCSHDownloader(**downloader_kwargs)

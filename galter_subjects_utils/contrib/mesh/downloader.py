@@ -31,7 +31,7 @@ class MeSHDownloader:
 
     def file_urls(self):
         """List of files to download."""
-        current_year = date.today().year
+        current_year = str(date.today().year)
         url_parent_segment = "MESH_FILES" if self.year == current_year else self.year  # noqa
         base_url = self.base_url + "/" + url_parent_segment
 
@@ -60,10 +60,7 @@ class MeSHDownloader:
         return urls
 
     def download(self):
-        """Download MeSH files of interest.
-
-        :param year: str. year of the files to download.
-        """
+        """Download MeSH files of interest."""
         # files to download
         urls = self.file_urls()
 
