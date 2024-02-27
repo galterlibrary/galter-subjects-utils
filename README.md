@@ -2,15 +2,15 @@
 
 *Subjects tooling for InvenioRDM.*
 
-When a new list of terms (e.g. MeSH) comes out, this tool can be used to update the list in a dedicated subject distribution package.
-This tool is typically required by the dedicated subject distribution packages under the `[dev]` extra.
+This distribution package provides an invenio subcommand group to manage controlled vocabulary subjects.
 
-The tool follows the same typical pattern for any subject:
+In particular, it provides functionality to
 
-1. Download the new list
-2. Read it with optional filters
-3. Convert vocabulary entries to InvenioRDM subjects format
-4. Write those to file
+- generate and update the initial list of subject terms for a vocabulary distribution package.
+- update a running instance's subjects by analyzing the delta between the instance and the updated target list of terms.
+
+Although it contributes MeSH and LCSH terms functionality (those may be extracted out in the future), the goal is for this package to provide a framing for any subjects operations/CLI tooling. See https://github.com/galterlibrary/invenio-subjects-mesh for an example
+of how it fits in the ecosystem.
 
 ## Installation
 
@@ -24,10 +24,9 @@ This repository follows [semantic versioning](https://semver.org/) indexed on in
 
 | This Version | invenio-app-rdm version |
 | ------------ | ----------------------- |
-| 0.X          | 11.X                    |
-| 1.X          | 11.X                    |
+| 0.3.X        | 11.X                    |
 
-This just means for example that version 1.X guarantees generation of subjects files compatible with invenio-app-rdm v11. When there is a break in subjects format, this tool will bump its major version.
+This just means for example that version 0.3 guarantees generation of subjects files and subject manipulation compatible with invenio-app-rdm v11. When there is a break in subjects format, this tool will bump its major version.
 
 ## Usage
 
