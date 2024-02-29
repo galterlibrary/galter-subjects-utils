@@ -143,46 +143,60 @@ class MeSHSubjectDeltasConverter:
 
     def _analyze_replace(self):
         """Determine which subjects have been replaced."""
+
+        def find_replacement_label(label):
+            """Return replacement label or None."""
+            new_label = self.replacements.get(label)
+            if new_label:
+                return new_label
+
+            # maybe label is qualified, so check if root is replaced
+            root_label, slash, qualifier = label.rpartition("/")
+            new_root_label = self.replacements.get(root_label)
+            if not new_root_label:
+                return None
+            new_label = new_root_label + slash + qualifier
+            return new_label
+
+        def find_replacement_id(label):
+            """Return replacement id or None if not replaced."""
+            replacement_label = find_replacement_label(label)
+            if not replacement_label:
+                return None
+
+            # is replacement_label for existing and kept subject?
+            replacement_analysis = self._label_to_analysis.get(replacement_label)  # noqa
+            if replacement_analysis and replacement_analysis.seen:
+                return replacement_analysis.id
+
+            # is replacement_label for newly added subject?
+            replacement_subject = next(
+                (s for s in self._additions if s.label == replacement_label),
+                None
+            )
+            if replacement_subject:
+                return replacement_subject.id
+
+            # is replacement_label for relabelled existing and kept subject?
+            replacement_analysis = next(
+                (
+                    a for a in self._label_to_analysis.values()
+                    if a.relabelled == replacement_label
+                ),
+                None
+            )
+            if replacement_analysis:
+                return replacement_analysis.id
+
+            return None
+
         for label, analysis in self._label_to_analysis.items():
             if analysis.seen:
                 continue
 
-            # get new label
-            # direct replacement
-            new_label = self.replacements.get(label)
-            if not new_label:
-                # maybe label is qualified, so check if root is replaced
-                root_label, slash, qualifier = label.rpartition("/")
-                new_root_label = self.replacements.get(root_label)
-                if new_root_label:
-                    new_label = new_root_label + slash + qualifier
-                else:
-                    new_label = None
-
-            if not new_label:
-                # No replacement
-                continue
-
-            # Not over yet, must also check that new label is valid
-            # (some qualified versions may not exist). Either it's a
-            # preexisting label that is still present or it's a new label.
-            # If it's neither, then it's a removal case as above.
-
-            # check seen
-            new_analysis = self._label_to_analysis.get(new_label)
-            if new_analysis and new_analysis.seen:
-                analysis.replaced = new_analysis.id
-            else:
-                # check additions
-                new_subject = next(
-                    (
-                        subject for subject in self._additions
-                        if subject.label == new_label
-                    ),
-                    None
-                )
-                if new_subject:
-                    analysis.replaced = new_subject.id
+            replacement_id = find_replacement_id(label)
+            if replacement_id:
+                analysis.replaced = replacement_id
 
     def _generate_ops(self):
         """Generate delta operations."""
