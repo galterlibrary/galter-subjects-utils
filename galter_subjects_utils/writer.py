@@ -41,6 +41,7 @@ def write_csv(entries, filepath, writer_kwargs=None):
 
     return filepath
 
+
 class SubjectDeltaLogger:
     """Convenience logger for delta operations applied to records."""
 

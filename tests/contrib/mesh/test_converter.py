@@ -86,15 +86,32 @@ def subject_qualified_present_only_in_dst():
     return Subject(id="D005654Q000187", label="Fundus Oculi/drug effects")
 
 
-def renamed_subjects():
+def subjects_renamed():
     """Subject and its renamed version."""
     return (
-        Subject(id="D017394", label="RNA, Guide"),
-        Subject(id="D017394", label="RNA, Guide, Kinetoplastida"),
+        Subject(
+            id="D044467",
+            label="American Native Continental Ancestry Group"
+        ),
+        Subject(id="D044467", label="American Indian or Alaska Native"),
     )
 
 
-def replaced_subjects_qualified_already_present():
+def subjects_qualified_renamed():
+    """Qualified subject and its renamed version."""
+    return (
+        Subject(
+            id="D044467Q000145",
+            label="American Native Continental Ancestry Group/classification"
+        ),
+        Subject(
+            id="D044467Q000145",
+            label="American Indian or Alaska Native/classification"
+        ),
+    )
+
+
+def subjects_qualified_replaced_already_present():
     """Subject and its replaced version.
 
     This function doesn't enforce an already present replaced version, but
@@ -103,17 +120,17 @@ def replaced_subjects_qualified_already_present():
     """
     return (
         Subject(
-            id="D000086562Q000145",
-            label="American Indians or Alaska Natives/classification"
+            id="D018290Q000145",
+            label="Cervical Intraepithelial Neoplasia/classification"
         ),
         Subject(
-            id="D044467Q000145",
-            label="American Indian or Alaska Native/classification"
+            id="D002578Q000145",
+            label="Uterine Cervical Dysplasia/classification"
         )
     )
 
 
-def replaced_subjects_newly_added():
+def subjects_replaced_newly_added():
     """Return a subject and its replaced version.
 
     This function doesn't enforce a newly added version, but
@@ -125,6 +142,24 @@ def replaced_subjects_newly_added():
     return (
         Subject(id="foo-before", label="Foo before"),
         Subject(id="foo-after", label="Foo after")
+    )
+
+
+def subjects_replaced_renamed():
+    """Return a subject and its replaced version for the relabelled scenario.
+
+    This is to be used for the case where a subject is replaced by
+    a pre-existing but relabelled subject.
+    """
+    return (
+        Subject(
+            id="D018290Q000145",
+            label="American Indians or Alaska Natives/classification"
+        ),
+        Subject(
+            id="D044467Q000145",
+            label="American Indian or Alaska Native/classification"
+        )
     )
 
 
@@ -170,7 +205,7 @@ def test_converter_add():
 
 def test_converter_rename():
     """Test rename scenarios only."""
-    orig_subject, renamed_subject = renamed_subjects()
+    orig_subject, renamed_subject = subjects_renamed()
     src = [
         orig_subject,
         subject_unqualified()
@@ -186,11 +221,11 @@ def test_converter_rename():
 
     expected = [
         {
-            "id": "https://id.nlm.nih.gov/mesh/D017394",
+            "id": "https://id.nlm.nih.gov/mesh/D044467",
             "type": "rename",
             "scheme": "MeSH",
-            "subject": "RNA, Guide",
-            "new_subject": "RNA, Guide, Kinetoplastida"
+            "subject": "American Native Continental Ancestry Group",
+            "new_subject": "American Indian or Alaska Native"
         },
     ]
     assert expected == rename_ops
@@ -198,31 +233,43 @@ def test_converter_rename():
 
 def test_converter_replace():
     """Test replace scenarios only (sort-of)."""
-    orig_subject_1, replacement_subject_1 = (
-        replaced_subjects_qualified_already_present()
+    subject_replace_present_src, subject_replace_present_dst = (
+        subjects_qualified_replaced_already_present()
     )
-    orig_subject_2, replacement_subject_2 = replaced_subjects_newly_added()
+    subject_replace_add_src, subject_replace_add_dst = (
+        subjects_replaced_newly_added()
+    )
+    subject_rename_src, subject_rename_dst = subjects_qualified_renamed()
+    subject_replace_rename_src, subject_replace_rename_dst = (
+        subjects_replaced_renamed()
+    )
     src = [
-        orig_subject_1,
+        subject_replace_present_src,
         subject_unqualified(),
-        replacement_subject_1,
-        orig_subject_2
+        subject_replace_present_dst,
+        subject_replace_add_src,
+        subject_replace_rename_src,
+        subject_rename_src,
     ]
     dst = [
         subject_unqualified(),
-        replacement_subject_1,
-        replacement_subject_2,
+        subject_replace_present_dst,
+        subject_replace_add_dst,
+        subject_replace_rename_dst,
+        subject_rename_dst,
     ]
     replacements = {
+        "Cervical Intraepithelial Neoplasia": "Uterine Cervical Dysplasia",
+        "Foo before": "Foo after",
         "American Indians or Alaska Natives": "American Indian or Alaska Native",  # noqa
-        orig_subject_2.label: replacement_subject_2.label
     }
     converter = MeSHSubjectDeltasConverter(src, dst, replacements)
 
     ops = converter.convert()
 
     expected = [
-        # contains add operation since replacement is new
+        # contains add and rename operations to account for replacement
+        # scenarios
         {
             "id": "https://id.nlm.nih.gov/mesh/foo-after",
             "type": "add",
@@ -230,11 +277,18 @@ def test_converter_replace():
             "subject": "Foo after"
         },
         {
-            "id": "https://id.nlm.nih.gov/mesh/D000086562Q000145",
+            "id": "https://id.nlm.nih.gov/mesh/D044467Q000145",
+            "type": "rename",
+            "scheme": "MeSH",
+            "subject": "American Native Continental Ancestry Group/classification",  # noqa
+            "new_subject": "American Indian or Alaska Native/classification"
+        },
+        {
+            "id": "https://id.nlm.nih.gov/mesh/D018290Q000145",
             "type": "replace",
             "scheme": "MeSH",
-            "subject": "American Indians or Alaska Natives/classification",
-            "new_id": "https://id.nlm.nih.gov/mesh/D044467Q000145"
+            "subject": "Cervical Intraepithelial Neoplasia/classification",
+            "new_id": "https://id.nlm.nih.gov/mesh/D002578Q000145"
         },
         {
             "id": "https://id.nlm.nih.gov/mesh/foo-before",
@@ -242,6 +296,13 @@ def test_converter_replace():
             "scheme": "MeSH",
             "subject": "Foo before",
             "new_id": "https://id.nlm.nih.gov/mesh/foo-after"
+        },
+        {
+            "id": "https://id.nlm.nih.gov/mesh/D018290Q000145",
+            "type": "replace",
+            "scheme": "MeSH",
+            "subject": "American Indians or Alaska Natives/classification",
+            "new_id": "https://id.nlm.nih.gov/mesh/D044467Q000145"
         },
     ]
     assert expected == ops
