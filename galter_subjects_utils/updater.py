@@ -152,49 +152,54 @@ def get_records_to_update(ops_data, data_cls):
     """Return data-layer records to update."""
 
     def get_targeted_ids(ops_data):
-        relevant_ops = (
-            filter_ops_by_type(ops_data, "replace") +
-            filter_ops_by_type(ops_data, "remove") +
-            filter_ops_by_type(ops_data, "rename")
-        )
-        return [op["id"] for op in relevant_ops]
-
-    def at_least_1_subject_targeted(ids):
-        """Where clause to get records with at least 1 relevant subject id.
-
-        Only call this for non-empty `ids`, otherwise the resulting where
-        clause is all-permissive.
-
-        WARNING: This is very ugly and I don't know how to make it better.
-                 We use RAW SQL to check for presence of id (@>). The syntax
-                 is not great but it gives us what we want.
-        """
-        raw = [
-            text(
-                'json::jsonb->\'metadata\'->\'subjects\' @> :subject_id'
-            ).bindparams(
-                bindparam(
-                    "subject_id",
-                    value=[{"id": subject_id}],
-                    unique=True,
-                    type_=JSONB
-                )
-            ) for subject_id in ids
+        return [
+            op["id"] for op in ops_data
+            if op.get("type") in ["replace", "remove", "rename"]
         ]
-        return or_(*raw)
 
-    targeted_ids = get_targeted_ids(ops_data)
+    def has_at_least_1_subject_targeted(record_data_db, ids):
+        """Return True if `record_data_db` has at least 1 subject in `ids`.
+
+        Because of cases where there are 100K+ subjects, we can't construct
+        queries filtering at the DB level. We do the filtering in memory,
+        on batches of records. We keep loading simple at the cost of
+        performance (but this is fine since this operation is in the
+        background anyway).
+        """
+        # May be None in some Drafts
+        if not record_data_db:
+            return False
+        subjects = record_data_db.get("metadata", {}).get("subjects", [])
+        return any(s.get("id") in ids for s in subjects)
+
+        # raw = [
+        #     text(
+        #         'json::jsonb->\'metadata\'->\'subjects\' @> :subject_id'
+        #     ).bindparams(
+        #         bindparam(
+        #             "subject_id",
+        #             value=[{"id": subject_id}],
+        #             unique=True,
+        #             type_=JSONB
+        #         )
+        #     ) for subject_id in ids
+        # ]
+        # return or_(*raw)
+
+    targeted_ids = frozenset(get_targeted_ids(ops_data))
 
     if not targeted_ids:
         return []
 
     stmt = (
         select(data_cls.model_cls)
-        .where(at_least_1_subject_targeted(targeted_ids))
+        .execution_options(yield_per=200)  # could be made adjustable
     )
 
     result = (
-        data_cls(obj.data, model=obj) for obj in db.session.scalars(stmt)
+        data_cls(obj.data, model=obj) for obj
+        in db.session.scalars(stmt)
+        if has_at_least_1_subject_targeted(obj.data, targeted_ids)
     )
 
     return result
@@ -270,11 +275,13 @@ class SubjectDeltaUpdater:
 
     def _remove_rdm_subjects(self):
         """Remove subjects from the Subjects entries."""
+        removal_ops = [
+            op for op in self._ops_data
+            if op.get("type") in ["remove", "replace"]
+        ]
         service = current_service_registry.get("subjects")
 
-        remove_ops = filter_ops_by_type(self._ops_data, "remove")
-        replace_ops = filter_ops_by_type(self._ops_data, "replace")
-        for op in remove_ops + replace_ops:
+        for op in removal_ops:
             try:
                 service.delete(
                     system_identity,
