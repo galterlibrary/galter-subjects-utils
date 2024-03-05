@@ -9,18 +9,21 @@
 """Terms updater."""
 
 import copy
+import re
+from collections import OrderedDict
 
 from invenio_access.permissions import system_identity
 from invenio_db import db
-from invenio_pidstore.errors import PersistentIdentifierError
 from invenio_pidstore.models import PersistentIdentifier
 from invenio_rdm_records.records import RDMDraft, RDMRecord
 from invenio_records_resources.proxies import current_service_registry
 from invenio_records_resources.services.uow import RecordCommitOp
-from sqlalchemy import and_, bindparam, delete, or_, select, text
-from sqlalchemy.dialects.postgresql import JSONB
+from invenio_search.engine import search
+from sqlalchemy import delete, select
 
 from .keeptrace import KeepTrace
+
+bulk = search.helpers.bulk
 
 
 def filter_ops_by_type(ops_data, _type):
@@ -118,6 +121,27 @@ def apply_op_data_change(op_data, orig_subjects, record):
     return applied
 
 
+def deduplicate_subjects(subjects):
+    """Return a deduplicated (order preserved) list of subjects.
+
+    :param subjects: list[dict]
+    :returns: list[dict]
+    """
+    def _tuplify(d):
+        """Transforms a subject dict into a tuple with value stripped.
+
+        This is needed because dicts are unhashable.
+        """
+        key = "id" if "id" in d else "subject"  # only 2 possibilities
+        value = d.get(key).strip()
+        return (key, value)
+
+    result = [_tuplify(d) for d in subjects]
+    result = OrderedDict.fromkeys(result)  # rm duplicates AND keeps order
+    result = [dict([t]) for t in result.keys()]  # back to subjects
+    return result
+
+
 def update_rdm_record(record, ops_data, logger, keep_trace):
     """Apply changes to record's subjects."""
     orig_subjects = copy.deepcopy(record["metadata"]["subjects"])
@@ -133,17 +157,26 @@ def update_rdm_record(record, ops_data, logger, keep_trace):
                 keep_trace.trace(record, op_data["subject"])
             logger.log(record.pid.pid_value, delta=op_data)
 
+    # Make sure subjects are deduplicated
+    record["metadata"]["subjects"] = deduplicate_subjects(
+        record["metadata"]["subjects"]
+    )
+
     # All side-effects
+    # ---
     records_service = current_service_registry.get("records")
+    # According to other code in InvenioRDM, the same indexer is used for
+    # records and drafts
     commit_op = RecordCommitOp(record, records_service.indexer)
-    # the following on_register, on_commit don't use the uow object
+    # The following on_register, on_commit don't use the uow object
     # so passing None is fine
     fake_uow = None
     try:
         commit_op.on_register(fake_uow)  # commits to DB
         commit_op.on_commit(fake_uow)  # reindexes in index
     except Exception as e:
-        logger.log(record.pid.pid_value, error=str(e))
+        msg = re.sub(r"\s+", " ", str(e))
+        logger.log(record.pid.pid_value, error=msg)
     finally:
         logger.flush()
 
@@ -171,20 +204,6 @@ def get_records_to_update(ops_data, data_cls):
             return False
         subjects = record_data_db.get("metadata", {}).get("subjects", [])
         return any(s.get("id") in ids for s in subjects)
-
-        # raw = [
-        #     text(
-        #         'json::jsonb->\'metadata\'->\'subjects\' @> :subject_id'
-        #     ).bindparams(
-        #         bindparam(
-        #             "subject_id",
-        #             value=[{"id": subject_id}],
-        #             unique=True,
-        #             type_=JSONB
-        #         )
-        #     ) for subject_id in ids
-        # ]
-        # return or_(*raw)
 
     targeted_ids = frozenset(get_targeted_ids(ops_data))
 
@@ -274,38 +293,68 @@ class SubjectDeltaUpdater:
             )
 
     def _remove_rdm_subjects(self):
-        """Remove subjects from the Subjects entries."""
-        removal_ops = [
-            op for op in self._ops_data
+        """Remove subjects from the Subjects entries.
+
+        We have to resort to low-level commands because the high-level ones
+        are not made for bulk operations. We've checked the implications
+        and we should be fine (at least at time of writing).
+        """
+        ids_for_removal = [
+            op["id"] for op in self._ops_data
             if op.get("type") in ["remove", "replace"]
         ]
         service = current_service_registry.get("subjects")
 
-        for op in removal_ops:
-            try:
-                service.delete(
-                    system_identity,
-                    op["id"]
-                )
-            except PersistentIdentifierError:
-                # For any persistent identifier related problem
-                # we just ignore it and make sure we can continue.
-                # Main scenario is when a subject has already been
-                # "service.delete"'d in which case its PID is only marked as
-                # deleted which interferes with service.delete and
-                # service.create.
-                pass
+        model_cls = service.record_cls.model_cls
+        size_of_batch = 200  # Maybe TODO: make configurable
+        for offset in range(0, len(ids_for_removal), size_of_batch):
+            batch = ids_for_removal[offset:offset + size_of_batch]
 
-            # Purge (completely delete) backing subject PID
-            # This operation is idempotent.
-            delete_pid_stmt = (
-                delete(PersistentIdentifier)
-                .where(
-                    and_(
-                        PersistentIdentifier.pid_type == "sub",
-                        PersistentIdentifier.pid_value == op["id"],
-                    )
-                )
+            # Delete from database
+            # ===
+            # Get ids of model class
+            # The ids_for_removal internally correspond to
+            # pids, so they need to be dereferenced first
+            stmt_to_select_ids = (
+                select(model_cls.id)
+                .where(model_cls.id == PersistentIdentifier.object_uuid)
+                .where(PersistentIdentifier.pid_type == "sub")
+                .where(PersistentIdentifier.pid_value.in_(batch))
             )
-            db.session.execute(delete_pid_stmt)
+            ids_of_model_cls = list(db.session.scalars(stmt_to_select_ids))
+
+            # Delete subject records
+            stmt_to_delete_subjects = (
+                delete(model_cls)
+                .where(model_cls.id.in_(ids_of_model_cls))
+                # ORM session synchronization has to be specified when deleting
+                # Here we skip synchronization since not needed
+                .execution_options(synchronize_session=False)
+            )
+            db.session.execute(stmt_to_delete_subjects)
+
+            # Delete backing subject PID
+            stmt_to_delete_pids = (
+                delete(PersistentIdentifier)
+                .where(PersistentIdentifier.pid_type == "sub")
+                .where(PersistentIdentifier.pid_value.in_(batch))
+                .execution_options(synchronize_session=False)
+            )
+            db.session.execute(stmt_to_delete_pids)
+
             db.session.commit()
+
+            # Delete from document engine
+            # ===
+            alias_of_index = service.record_cls.index.search_alias
+            bulk(
+                service.indexer.client,
+                (
+                    {
+                        "_op_type": "delete",
+                        "_index": alias_of_index,
+                        "_id": id_
+                    }
+                    for id_ in ids_of_model_cls
+                ),
+            )
