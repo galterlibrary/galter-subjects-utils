@@ -472,3 +472,89 @@ def test_update_keep_trace(
     # Contains keep_trace template due to rename
     assert any_contains(subjects, {"subject": "anything 2 anything"})
     assert any_contains(subjects, {"subject": "Baz-Two"})
+
+
+def test_update_edge_case(
+    create_subject_data, minimal_record_input, create_record_data_fn,
+):
+    # Test edge any other edge case that pops up
+    # - subjects of records are deduplicated after modifications
+
+    # Assignments
+    subjects_data = [
+        create_subject_data(
+            system_identity,
+            {
+                "id": "http://example.org/zim/0",
+                "scheme": "zim",
+                "subject": "0",
+            },
+        ),
+        create_subject_data(
+            system_identity,
+            {
+                "id": "http://example.org/zim/0QA",
+                "scheme": "zim",
+                "subject": "0QA",
+            },
+        ),
+    ]
+
+    record_input = copy.deepcopy(minimal_record_input)
+    record_input["metadata"]["subjects"] = [
+        {"subject": "0QA"},
+        {"id": "http://example.org/zim/0"},
+        {"id": "http://example.org/zim/0QA"},
+    ]
+    record_0_data = create_record_data_fn(system_identity, record_input)
+
+    delta_ops = [
+        {
+            "type": "replace",
+            "id": "http://example.org/zim/0QA",
+            "scheme": "zim",
+            "subject": "0QA",
+            "new_id": "http://example.org/zim/0",
+            "keep_trace": "Y",
+        }
+    ]
+    delta_logger = SubjectDeltaLogger()
+    keep_trace = KeepTrace(
+        field="metadata.subjects.subject",
+        template="{subject}"
+    )
+    # make sure indices are refreshed
+    RDMRecord.index.refresh()
+    Subject.index.refresh()
+
+    # Actions
+    updater = SubjectDeltaUpdater(delta_ops, delta_logger, keep_trace)
+    updater.update()
+    # make sure indices are refreshed
+    RDMRecord.index.refresh()
+    Subject.index.refresh()
+
+    # Assertions
+    # at DB
+    # -----
+    # record 0
+    subjects = get_subjects_of_record_from_db(record_0_data.pid.pid_value)
+    assert 2 == len(subjects)
+    assert any_contains(subjects, {"subject": "0QA"})
+    assert any_contains(subjects, {"id": "http://example.org/zim/0"})
+
+    # at document engine
+    # ---
+    # This is done for completeness sake, just in case some changes are made
+    # that would inadvertently skip updating the document engine.
+    RDMRecord.index.refresh()
+    records = get_records_from_de()
+
+    # record 0
+    subjects = get_subjects_of_record_from_de(
+        records,
+        record_0_data.pid.pid_value
+    )
+    assert 2 == len(subjects)
+    assert any_contains(subjects, {"subject": "0QA"})
+    assert any_contains(subjects, {"id": "http://example.org/zim/0"})
