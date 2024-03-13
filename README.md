@@ -31,7 +31,7 @@ This just means for example that version 0.3 guarantees generation of subjects f
 ## Usage
 
 ```bash
-galter-subjects-utils --help
+pipenv run invenio galter-subjects --help
 ```
 
 ## Development
