@@ -42,7 +42,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 scripts = {galter-subjects-utils = "galter_subjects_utils.cli:main"}
 urls = {Repository = "https://github.com/galterlibrary/galter-subjects-utils"}
-version = "0.3.3"
+version = "0.3.4"
 
 [project.optional-dependencies]
 dev = [
@@ -59,8 +59,9 @@ galter_subjects = "galter_subjects_utils.cli:main"
 
 
 # Only setuptools usage
-[tool.setuptools]
-packages = ["galter_subjects_utils"]
+[tool.setuptools.packages.find]
+include = ["galter_subjects_utils", "galter_subjects_utils.*"]
+
 
 [tool.check-manifest]
 ignore = [
