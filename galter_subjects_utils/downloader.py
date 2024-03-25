@@ -30,25 +30,3 @@ def extract_file(in_filepath, out_filepath):
             shutil.copyfileobj(f_in, f_out)
 
     return out_filepath
-
-
-class LCSHDownloader:
-    """Download LCSH file."""
-
-    def __init__(self, directory, cache=False):
-        """Constructor."""
-        self.base_url = "https://id.loc.gov/download/authorities/subjects.skosrdf.jsonld.gz"  # noqa
-        self.directory = directory
-        self.filepath = self.directory / self.base_url.rsplit("/")[-1]
-        self.cache = cache
-
-    def download(self):
-        """Download LCSH files of interest."""
-        if not self.cache or not self.filepath.exists():
-            download_file(self.base_url, self.filepath)
-            # sneak extraction in caching: bit of a cheat, but ok for now
-            extract_file(self.filepath, self.filepath.with_suffix(""))
-
-        self.downloaded_filepath = self.filepath  # just a marker + future
-        self.extracted_filepath = self.filepath.with_suffix("")
-        return self.extracted_filepath

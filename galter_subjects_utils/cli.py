@@ -14,13 +14,12 @@ from pathlib import Path
 import click
 from flask.cli import with_appcontext
 
+from .contrib.lcsh.cli import lcsh
 from .contrib.mesh.cli import mesh
-from .converter import LCSHRDMConverter
-from .downloader import LCSHDownloader
 from .keeptrace import KeepTrace
-from .reader import read_csv, read_jsonl
+from .reader import read_csv
 from .updater import SubjectDeltaUpdater
-from .writer import SubjectDeltaLogger, write_jsonl
+from .writer import SubjectDeltaLogger
 
 
 @click.group()
@@ -28,6 +27,7 @@ def main():
     """A subjects CLI utility (mostly for InvenioRDM)."""
 
 
+main.add_command(lcsh)
 main.add_command(mesh)
 
 
@@ -37,51 +37,6 @@ defaults = {
     "downloads-dir": Path.cwd(),
     "output-file": Path.cwd(),
 }
-
-
-def to_lcsh_downloader_kwargs(parameters):
-    """To LCSHDownloader kwargs."""
-    result = {
-        "cache": not parameters["no_cache"],
-        "directory": Path.cwd() / parameters["downloads_dir"]
-    }
-    return result
-
-
-def to_lcsh_converter_kwargs(downloader):
-    """Provide LCSH converter args from `downloader`."""
-    result = {
-        "topics": read_jsonl(downloader.extracted_filepath)
-    }
-    return result
-
-
-@main.command()
-@click.option(
-    "--downloads-dir", "-d",
-    type=click.Path(path_type=Path),
-    default=defaults["downloads-dir"])
-@click.option(
-    "--output-file", "-o",
-    type=click.Path(path_type=Path),
-    default=defaults["output-file"] / "subjects_lcsh.jsonl",
-)
-@click.option("--no-cache", default=False)
-def lcsh(**parameters):
-    """LCSH related commands."""
-    # Download
-    downloader_kwargs = to_lcsh_downloader_kwargs(parameters)
-    downloader = LCSHDownloader(**downloader_kwargs)
-    downloader.download()
-
-    # Convert
-    converter_kwargs = to_lcsh_converter_kwargs(downloader)
-    converter = LCSHRDMConverter(**converter_kwargs)
-
-    # Write
-    filepath = write_jsonl(converter, parameters["output_file"])
-
-    print(f"LCSH terms written here {filepath}")
 
 
 keep_trace_field_help = "Dotted field path to where trace should be kept."
