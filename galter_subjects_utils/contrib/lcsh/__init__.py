@@ -6,4 +6,4 @@
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
 
-"""Contributed code."""
+"""LCSH contributed code."""

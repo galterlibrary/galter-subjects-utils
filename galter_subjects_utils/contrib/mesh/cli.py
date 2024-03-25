@@ -15,14 +15,17 @@ from pathlib import Path
 import click
 from flask.cli import with_appcontext
 
+from galter_subjects_utils.adapter import converted_to_subjects
+from galter_subjects_utils.deltor import DeltasGenerator
 from galter_subjects_utils.keeptrace import KeepTrace
 from galter_subjects_utils.reader import get_rdm_subjects, mapping_by
-from galter_subjects_utils.writer import write_csv, write_jsonl
+from galter_subjects_utils.writer import write_csv
 
-from .adapter import converted_to_subjects, generate_replacements
-from .converter import MeSHRDMConverter, MeSHSubjectDeltasConverter
+from .adapter import generate_replacements
+from .converter import MeSHRDMConverter
 from .downloader import MeSHDownloader
 from .reader import MeSHReader, MeSHReplaceReader, topic_filter
+from .scheme import MeSHScheme
 
 defaults = {
     "year": date.today().year,
@@ -164,10 +167,11 @@ def mesh_deltas(**parameters):
     downloads_dir = parameters["downloads_dir"].expanduser()
     year = parameters["year"]
     filter_ = parameters["filter"]
+    mesh = MeSHScheme()
 
     # Source subjects
-    subject_rdm_preexisting = get_rdm_subjects(scheme="MeSH")
-    src = converted_to_subjects(subject_rdm_preexisting)
+    subject_rdm_preexisting = get_rdm_subjects(scheme=mesh.name)
+    src = converted_to_subjects(subject_rdm_preexisting, mesh.prefix)
 
     # Destination subjects
     subjects_fp = downloads_dir / f"d{year}.bin"
@@ -192,12 +196,13 @@ def mesh_deltas(**parameters):
     )
 
     ops = (
-        MeSHSubjectDeltasConverter(
+        DeltasGenerator(
             src_subjects=src,
             dst_subjects=dst,
+            scheme=mesh,
             replacements=replacements
         )
-        .convert()
+        .generate()
     )
     # in-place
     KeepTrace.mark(

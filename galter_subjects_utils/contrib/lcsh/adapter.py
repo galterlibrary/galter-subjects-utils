@@ -12,17 +12,20 @@
 def generate_replacements(replace_iter):
     """Converts a replace iterable into a replacement dict.
 
-    :param replace_iter: Iterable[ReplaceEntry]
+    :param replace_iter: Iterable[LCSHReplaceEntry]
 
-    ReplaceEntry:
+    LCSHReplaceEntry:
 
     {
-        "MH OLD": "...",
-        "MH NEW": "...",
-        "delete": "...",
-        "status": "...",
+        "id": "...",
+        "time": "...",
+        "subject": "...",
+        "new_id": "...",
+        "new_subject": "...",
+        "notes": "...",
     }
     """
     return {
-        e["MH OLD"]: e["MH NEW"] for e in replace_iter if e["delete"]
+        e["subject"]: e["new_subject"] for e in replace_iter
+        if e["new_subject"]
     }
