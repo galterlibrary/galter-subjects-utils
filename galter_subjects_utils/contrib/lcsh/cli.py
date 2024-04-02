@@ -8,6 +8,7 @@
 
 """LCSH Command line tool."""
 
+from datetime import datetime
 from functools import wraps
 from pathlib import Path
 
@@ -21,7 +22,7 @@ from galter_subjects_utils.reader import get_rdm_subjects, read_csv, read_jsonl
 from galter_subjects_utils.writer import write_csv
 
 from .adapter import generate_replacements
-from .converter import LCSHRDMConverter, deprecated_to_replacements
+from .converter import LCSHRDMConverter, raw_to_deprecated
 from .downloader import LCSHDownloader
 from .scheme import LCSHScheme
 
@@ -121,23 +122,26 @@ def lcsh_file(**parameters):
     "downloads-dir",
     type=click.Path(path_type=Path, exists=True, file_okay=False),
 )
+@click.option("--since", "-s", default=None, help="Filter for YYYY-MM-DD and later.")  # noqa
 def lcsh_deprecated(**parameters):
     """Generate CSV file of raw deprecated LCSH topics.
 
-    This file is then parsed by a metadata expert and filled out for future
-    use in lcsh_deltas.
+    This file is then parsed by a metadata expert and potentially edited
+    for future use in lcsh_deltas.
     """
     downloads_dir = parameters["downloads_dir"].expanduser()
+    since = parameters["since"]
+    since = datetime.strptime(since, "%Y-%m-%d") if since else None
 
     fp_of_subjects = downloads_dir / f"subjects.skosrdf.jsonld"
     topics_raw = read_jsonl(fp_of_subjects)
-    replacements_raw = deprecated_to_replacements(topics_raw)
+    deprecations = raw_to_deprecated(topics_raw, since)
 
     header = ["id", "time", "subject", "new_id", "new_subject", "notes"]
-    fp_of_replacements = downloads_dir / "lcsh_replacements.csv"
+    fp_of_deprecated = downloads_dir / "deprecated_lcsh.csv"
     write_csv(
-        replacements_raw,
-        fp_of_replacements,
+        deprecations,
+        fp_of_deprecated,
         writer_kwargs={
             "fieldnames": header
         }
