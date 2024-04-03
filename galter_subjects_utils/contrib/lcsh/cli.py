@@ -147,6 +147,39 @@ def lcsh_deprecated(**parameters):
         }
     )
 
+    print(f"LCSH deprecated written here {fp_of_deprecated}")
+
+
+@lcsh.command("replacements")
+@click.argument(
+    "deprecated-file",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False),
+)
+def lcsh_replacements(**parameters):
+    """Generate CSV file of replaced LCSH topics.
+
+    Warning: this file has to be reviewed/edited by metadata expert to fill
+             out potentially absent "new_subject" field.
+
+    This file is used in lcsh_deltas.
+    """
+    fp_of_deprecated = parameters["deprecated_file"].expanduser()
+
+    deprecations = read_csv(fp_of_deprecated)
+    replacements = (d for d in deprecations if d.get("new_id"))
+
+    header = ["id", "time", "subject", "new_id", "new_subject", "notes"]
+    fp_of_replacements = fp_of_deprecated.parent / "replacements_lcsh.csv"
+    write_csv(
+        replacements,
+        fp_of_replacements,
+        writer_kwargs={
+            "fieldnames": header
+        }
+    )
+
+    print(f"LCSH replacements written here {fp_of_replacements}")
+
 
 @lcsh.command("deltas")
 @click.option(
@@ -180,7 +213,7 @@ def lcsh_deltas(**parameters):
     dst = converted_to_subjects(converted, prefix=lcsh.prefix)
 
     # Replacements
-    fp_of_replacements = downloads_dir / "lcsh_replacements.csv"
+    fp_of_replacements = downloads_dir / "replacements_lcsh.csv"
     replacements_lcsh = read_csv(fp_of_replacements)
     replacements = generate_replacements(replacements_lcsh)
 
