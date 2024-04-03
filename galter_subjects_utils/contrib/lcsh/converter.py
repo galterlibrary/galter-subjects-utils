@@ -75,7 +75,11 @@ class LCSHRDMConverter:
 
 
 def find_main_node(topic):
-    """Find main topic node among topic's skos graph."""
+    """Find main topic node among topic's skos graph.
+
+    :param topic: skos topic
+    :type topic: dict
+    """
     id_suffix = topic["@id"]
     node_main = next(
         (
@@ -90,7 +94,13 @@ def find_main_node(topic):
 
 
 def find_deprecation_node(topic, node_main):
-    """Find deprecation node among topic's skos graph."""
+    """Find deprecation node among topic's skos graph.
+
+    :param topic: skos topic
+    :type topic: dict
+    :param node_main: main skos graph node
+    :type node_main: dict
+    """
     for node in topic["@graph"]:
         is_deprecated = node.get("cs:changeReason") == "deprecated"
         subject_of_change = node.get("cs:subjectOfChange", {}).get("@id")
@@ -101,7 +111,11 @@ def find_deprecation_node(topic, node_main):
 
 
 def is_deprecated(topic):
-    """Filter for deprecated topics."""
+    """Filter for deprecated topics.
+
+    :param topic: skos topic
+    :type topic: dict
+    """
     # Find main node
     node_main = find_main_node(topic)
 
@@ -113,7 +127,7 @@ def happened_since(topic, since=None):
     """Filter for topic having happened after since.
 
     :param topic: skos topic
-    :type since: dict
+    :type topic: dict
     :param since: date since to filter by (included)
     :type since: datetime.datetime
     """
@@ -153,7 +167,11 @@ def extract_replacement_id_subject(notes):
 
 
 def to_raw_replacement(topic):
-    """Fill out replacement dict."""
+    """Fill out replacement dict.
+
+    :param topic: skos topic
+    :type topic: dict
+    """
     node_main = find_main_node(topic)
     node_deprecation = find_deprecation_node(topic, node_main)
     notes = find_explanation(node_main.get("skos:changeNote"))
@@ -174,7 +192,7 @@ def raw_to_deprecated(topics, since=None):
     :param topics: LCSH Topics iterable
     :type topics: iterable[dict]
     :param since: filter for this date (included) and later
-    :type topics: datetime.datetime
+    :type since: datetime.datetime
 
     :yields: Replacement dicts of the shape:
         {
