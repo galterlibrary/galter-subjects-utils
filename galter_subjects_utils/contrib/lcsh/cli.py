@@ -210,7 +210,9 @@ def lcsh_deltas(**parameters):
     fp_of_subjects = downloads_dir / "subjects.skosrdf.jsonld"
     topics_raw = read_jsonl(fp_of_subjects)
     converted = LCSHRDMConverter(topics_raw).convert()
-    dst = converted_to_subjects(converted, prefix=lcsh.prefix)
+    # Exclude special automated geographic terms
+    converted_filtered = (s for s in converted if not s["id"].endswith("-781"))
+    dst = converted_to_subjects(converted_filtered, prefix=lcsh.prefix)
 
     # Replacements
     fp_of_replacements = downloads_dir / "replacements_lcsh.csv"
