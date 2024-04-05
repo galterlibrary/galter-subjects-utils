@@ -103,11 +103,14 @@ def lcsh_file(**parameters):
     # Convert
     converter_kwargs = to_lcsh_converter_kwargs(downloader)
     converter = LCSHRDMConverter(**converter_kwargs)
+    converted = converter.convert(),
+    # Exclude special automated geographic terms
+    converted_filtered = (s for s in converted if not s["id"].endswith("-781"))
 
     # Write
     header = ["id", "scheme", "subject"]
     filepath = write_csv(
-        converter.convert(),
+        converted_filtered,
         parameters["output_file"],
         writer_kwargs={
             "fieldnames": header

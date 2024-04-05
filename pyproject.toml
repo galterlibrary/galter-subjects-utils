@@ -35,7 +35,7 @@ dependencies = [
     "sqlalchemy",
 ]
 description = "Subject terms tooling for InvenioRDM"
-keywords = ["invenio", "inveniordm", "subjects", "MeSH"]
+keywords = ["invenio", "inveniordm", "subjects"]
 license = {file = "LICENSE"}
 name = "galter-subjects-utils"
 readme = "README.md"

@@ -22,9 +22,10 @@ pip install galter-subjects-utils
 
 This repository follows [semantic versioning](https://semver.org/) indexed on invenio-app-rdm compatibility according to the table below:
 
-| This Version | invenio-app-rdm version |
-| ------------ | ----------------------- |
-| 0.3.X        | 11.X                    |
+| galter-subjects-utils | invenio-app-rdm version |
+| --------------------- | ----------------------- |
+| 0.3.X                 | 11.X                    |
+| 0.4.X                 | 11.X                    |
 
 This just means for example that version 0.3 guarantees generation of subjects files and subject manipulation compatible with invenio-app-rdm v11. When there is a break in subjects format, this tool will bump its major version.
 
