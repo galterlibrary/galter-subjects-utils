@@ -1,5 +1,9 @@
 # Changes
 
+Version 0.4.0 (released 2024-04-08)
+
+- Exclude -781 terms from file generation too
+
 Version 0.4.0 (released 2024-04-05)
 
 - Support update of LCSH terms under new architecture
