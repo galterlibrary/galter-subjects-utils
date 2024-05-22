@@ -1,6 +1,10 @@
 # Changes
 
-Version 0.4.0 (released 2024-04-08)
+Version 0.4.2 (released 2024-05-22)
+
+- Fix `mesh deltas` command due to missing prefix
+
+Version 0.4.1 (released 2024-04-08)
 
 - Exclude -781 terms from file generation too
 
