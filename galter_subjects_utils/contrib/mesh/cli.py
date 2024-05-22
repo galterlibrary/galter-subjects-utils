@@ -187,7 +187,7 @@ def mesh_deltas(**parameters):
         qualifiers_mapping = {}
 
     converted = MeSHRDMConverter(topics, qualifiers_mapping).convert()
-    dst = converted_to_subjects(converted)
+    dst = converted_to_subjects(converted, mesh.prefix)
 
     # Replacements
     replace_fp = downloads_dir / f"replace{year}.txt"
