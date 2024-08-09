@@ -3,13 +3,13 @@
 # Copyright (C) 2023-2024 Northwestern University.
 #
 
-name: galter-subjects-utils CI
+name: Tests for galter-subjects-utils
 
 on:
   push:
-    branches: master
+    branches: [master]
   pull_request:
-    branches: master
+    branches: [master]
   workflow_dispatch:
     inputs:
       reason:
@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-          python-version: ["3.8", "3.9", "3.10"]
+          python-version: ["3.9", "3.11", "3.12"]
           requirements-level: [pypi]
 
     steps:

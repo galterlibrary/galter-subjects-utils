@@ -15,13 +15,13 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     # Meant as compatibility constraints
-    "invenio-app-rdm>=11.0.0,<12.0.0",
+    "invenio-app-rdm>=11.0.0,<13.0.0",
     # Meant as usage listing
     "click",
     "flask",
