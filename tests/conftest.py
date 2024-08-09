@@ -25,7 +25,7 @@ def app_config(app_config):
         # Variable not used. We set it to silent warnings
         'JSONSCHEMAS_HOST': 'not-used',
         # Disable DATACITE.
-        'RDM_RECORDS_DOI_DATACITE_ENABLED': False,
+        'DATACITE_ENABLED': False,
         'RECORDS_REFRESOLVER_CLS': (
             "invenio_records.resolver.InvenioRefResolver"
         ),

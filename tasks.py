@@ -22,7 +22,7 @@ def docker_services_cli_up(c):
     Returns dict of exported environment variables.
     """
     result = c.run(
-        'docker-services-cli up --db postgresql --search opensearch2 --mq redis --env',  # noqa
+        'docker-services-cli up --db postgresql --search opensearch2 --mq rabbitmq --cache redis --env',  # noqa
         hide=True
     )
     out = result.stdout
