@@ -1,5 +1,9 @@
 # Changes
 
+Version 0.5.1 (released 2025-01-21)
+
+- Fix `lcsh file` command due to errant comma
+
 Version 0.4.2 (released 2024-05-22)
 
 - Fix `mesh deltas` command due to missing prefix

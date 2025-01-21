@@ -103,7 +103,7 @@ def lcsh_file(**parameters):
     # Convert
     converter_kwargs = to_lcsh_converter_kwargs(downloader)
     converter = LCSHRDMConverter(**converter_kwargs)
-    converted = converter.convert(),
+    converted = converter.convert()
     # Exclude special automated geographic terms
     converted_filtered = (s for s in converted if not s["id"].endswith("-781"))
 
