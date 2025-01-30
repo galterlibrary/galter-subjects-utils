@@ -2,6 +2,10 @@
 
 *Subjects tooling for InvenioRDM.*
 
+<a href="https://pypi.org/project/galter-subjects-utils/">
+  <img src="https://img.shields.io/pypi/v/galter-subjects-utils.svg">
+</a>
+
 This distribution package provides an invenio subcommand group to manage controlled vocabulary subjects.
 
 In particular, it provides functionality to
