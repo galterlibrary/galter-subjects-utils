@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2023-2024 Northwestern University.
+# Copyright (C) 2023-2025 Northwestern University.
 #
 # galter-subjects-utils is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -9,7 +9,7 @@
 """LCSH Command line tool."""
 
 from datetime import datetime
-from functools import wraps
+from functools import partial, wraps
 from pathlib import Path
 
 import click
@@ -32,24 +32,25 @@ defaults = {
 }
 
 
-@click.group()
-def lcsh():
-    """LCSH related commands."""
+option_lcsh_downloads_dir = partial(
+    click.option(
+        "--downloads-dir",
+        "-d",
+        type=click.Path(path_type=Path),
+        default=defaults["downloads-dir"],
+    )
+)
 
 
 def lcsh_download_options(f):
     """Encapsulate common LCSH download options."""
 
-    @click.option(
-        "--downloads-dir", "-d",
-        type=click.Path(path_type=Path),
-        default=defaults["downloads-dir"]
-    )
+    @option_lcsh_downloads_dir
     @click.option(
         "--no-cache",
         default=False,
         help="Re-download even if already downloaded.",
-        is_flag=True
+        is_flag=True,
     )
     @wraps(f)
     def _wrapped(*args, **kwargs):
@@ -66,6 +67,11 @@ def to_lcsh_downloader_kwargs(parameters):
         "directory": Path.cwd() / parameters["downloads_dir"]
     }
     return result
+
+
+@click.group()
+def lcsh():
+    """LCSH related commands."""
 
 
 @lcsh.command("download")
@@ -122,26 +128,34 @@ def lcsh_file(**parameters):
 
 @lcsh.command("deprecated")
 @click.argument(
-    "downloads-dir",
-    type=click.Path(path_type=Path, exists=True, file_okay=False),
+    "subjects-file",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False),
 )
-@click.option("--since", "-s", default=None, help="Filter for YYYY-MM-DD and later.")  # noqa
+@click.option(
+    "--since", "-s", default=None, help="Filter for YYYY-MM-DD and later."
+)
+@click.option("--output-file", "-o", type=click.Path(path_type=Path))
 def lcsh_deprecated(**parameters):
     """Generate CSV file of raw deprecated LCSH topics.
 
     This file is then parsed by a metadata expert and potentially edited
     for future use in lcsh_deltas.
     """
-    downloads_dir = parameters["downloads_dir"].expanduser()
+    fp_of_subjects = parameters["subjects_file"].expanduser()
+
     since = parameters["since"]
     since = datetime.strptime(since, "%Y-%m-%d") if since else None
 
-    fp_of_subjects = downloads_dir / f"subjects.skosrdf.jsonld"
     topics_raw = read_jsonl(fp_of_subjects)
     deprecations = raw_to_deprecated(topics_raw, since)
 
+    fp_of_deprecated = (
+        parameters["output_file"] or
+        Path.cwd() / "deprecated_lcsh.csv"
+    )
+
     header = ["id", "time", "subject", "new_id", "new_subject", "notes"]
-    fp_of_deprecated = downloads_dir / "deprecated_lcsh.csv"
+
     write_csv(
         deprecations,
         fp_of_deprecated,
@@ -158,6 +172,7 @@ def lcsh_deprecated(**parameters):
     "deprecated-file",
     type=click.Path(path_type=Path, exists=True, dir_okay=False),
 )
+@click.option("--output-file", "-o", type=click.Path(path_type=Path))
 def lcsh_replacements(**parameters):
     """Generate CSV file of replaced LCSH topics.
 
@@ -171,8 +186,13 @@ def lcsh_replacements(**parameters):
     deprecations = read_csv(fp_of_deprecated)
     replacements = (d for d in deprecations if d.get("new_id"))
 
+    fp_of_replacements = (
+        parameters["output_file"] or
+        fp_of_deprecated.parent / "replacements_lcsh.csv"
+    )
+
     header = ["id", "time", "subject", "new_id", "new_subject", "notes"]
-    fp_of_replacements = fp_of_deprecated.parent / "replacements_lcsh.csv"
+
     write_csv(
         replacements,
         fp_of_replacements,
@@ -186,12 +206,19 @@ def lcsh_replacements(**parameters):
 
 @lcsh.command("deltas")
 @click.option(
-    "--downloads-dir", "-d",
-    type=click.Path(path_type=Path),
-    default=defaults["downloads-dir"]
+    "--subjects-file",
+    "-s",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False),
+    required=True,
 )
 @click.option(
-    "--output-file", "-o",
+    "--replacements-file",
+    "-r",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False),
+)
+@click.option(
+    "--output-file",
+    "-o",
     type=click.Path(path_type=Path),
     default=defaults["output-file"] / "deltas.csv",
 )
@@ -199,7 +226,6 @@ def lcsh_replacements(**parameters):
 def lcsh_deltas(**parameters):
     """Write LCSH subject delta operations to file."""
     print("Generating deltas...")
-    downloads_dir = parameters["downloads_dir"].expanduser()
     lcsh = LCSHScheme()
 
     # Source subjects
@@ -210,7 +236,7 @@ def lcsh_deltas(**parameters):
     )
 
     # Destination subjects
-    fp_of_subjects = downloads_dir / "subjects.skosrdf.jsonld"
+    fp_of_subjects = parameters["subjects_file"]
     topics_raw = read_jsonl(fp_of_subjects)
     converted = LCSHRDMConverter(topics_raw).convert()
     # Exclude special automated geographic terms
@@ -218,7 +244,7 @@ def lcsh_deltas(**parameters):
     dst = converted_to_subjects(converted_filtered, prefix=lcsh.prefix)
 
     # Replacements
-    fp_of_replacements = downloads_dir / "replacements_lcsh.csv"
+    fp_of_replacements = parameters["replacements_file"]
     replacements_lcsh = read_csv(fp_of_replacements)
     replacements = generate_replacements(replacements_lcsh)
 
