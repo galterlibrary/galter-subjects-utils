@@ -42,7 +42,7 @@ class DeltasGenerator:
         self.src_subjects = src_subjects
         self.dst_subjects = dst_subjects
         self.scheme = scheme
-        self.replacements = replacements
+        self.replacements = replacements or {}
 
         # The below will be filled out by _analyze_src(), _analyze_dst() and
         # _analyze_replace()
