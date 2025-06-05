@@ -1,5 +1,9 @@
 # Changes
 
+Version 0.6.0 (released 2025-06-05)
+
+- Change interface of `galter_subjects lcsh deprecated`, `galter_subjects lcsh replacements`, `galter_subjects lcsh deltas`
+
 Version 0.5.1 (released 2025-01-21)
 
 - Fix `lcsh file` command due to errant comma

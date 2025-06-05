@@ -39,7 +39,7 @@ keywords = ["invenio", "inveniordm", "subjects"]
 license = {file = "LICENSE"}
 name = "galter-subjects-utils"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 scripts = {galter-subjects-utils = "galter_subjects_utils.cli:main"}
 urls = {Repository = "https://github.com/galterlibrary/galter-subjects-utils"}
 version = "0.6.0"
