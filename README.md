@@ -32,13 +32,15 @@ This just means for example that version 0.3 guarantees generation of subjects f
 
 ## Usage
 
+In virtualenv (`(venv)` denotes that going forward):
+
 ```bash
-pipenv run invenio galter-subjects --help
+(venv) invenio galter-subjects --help
 ```
 
 ## Development
 
-Install the project in editable mode with `dev` dependencies in an isolated virtualenv (`(venv)` denotes that going forward):
+Install the project in editable mode with `dev` dependencies in an isolated virtualenv:
 
 ```bash
 (venv) pip install -e .[dev]
