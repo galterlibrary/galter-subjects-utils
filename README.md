@@ -28,9 +28,8 @@ This repository follows [semantic versioning](https://semver.org/) indexed on in
 
 | galter-subjects-utils | invenio-app-rdm version |
 | --------------------- | ----------------------- |
-| 0.3.X                 | 11.X                    |
-| 0.4.X                 | 11.X                    |
-| 0.5.X                 | 12.X                    |
+| 0.7.X                 | 13.X                    |
+| 0.5.X, 0.6.x          | 12.X                    |
 
 This just means for example that version 0.3 guarantees generation of subjects files and subject manipulation compatible with invenio-app-rdm v11. When there is a break in subjects format, this tool will bump its major version.
 
@@ -62,4 +61,15 @@ Check manifest:
 
 ```bash
 (venv) inv check-manifest
+```
+
+To check compatibility with the pre-release version of InvenioRDM (invenio-app-rdm):
+
+```bash
+# Step 1 - install the pre-release dependencies
+(venv) pip install --pre -e .[dev_pre]
+# Step 2 - Run the pre-release tests
+(venv) inv test
+# if using uv run:
+uv run --extra dev_pre --prerelease=allow inv test
 ```

@@ -21,21 +21,24 @@ def app_config(app_config):
     For test purposes we need to explicitly set these configuration variables
     above any other module's config.py potential clashes.
     """
-    app_config.update({
-        # Variable not used. We set it to silent warnings
-        'JSONSCHEMAS_HOST': 'not-used',
-        # Disable DATACITE.
-        'DATACITE_ENABLED': False,
-        'RECORDS_REFRESOLVER_CLS': (
-            "invenio_records.resolver.InvenioRefResolver"
-        ),
-        'RECORDS_REFRESOLVER_STORE': (
-            "invenio_jsonschemas.proxies.current_refresolver_store"
-        ),
-        'MAIL_DEFAULT_SENDER': ('Prism', 'no-reply@localhost'),
-        # Uncomment to investigate SQL queries
-        # 'SQLALCHEMY_ECHO': True,
-    })
+    app_config.update(
+        {
+            # Variable not used. We set it to silent warnings
+            "JSONSCHEMAS_HOST": "not-used",
+            # Disable DATACITE.
+            "DATACITE_ENABLED": False,
+            "RECORDS_REFRESOLVER_CLS": (
+                "invenio_records.resolver.InvenioRefResolver"
+            ),
+            "RECORDS_REFRESOLVER_STORE": (
+                "invenio_jsonschemas.proxies.current_refresolver_store"
+            ),
+            "MAIL_DEFAULT_SENDER": ("Prism", "no-reply@localhost"),
+            "SEARCH_HOSTS": [{'host': 'localhost', 'port': 9200}],
+            # Uncomment to investigate SQL queries
+            # 'SQLALCHEMY_ECHO': True,
+        }
+    )
 
     return app_config
 

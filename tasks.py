@@ -1,52 +1,39 @@
-# Copyright (C) 2024 Northwestern University.
+# Copyright (C) 2024-2025 Northwestern University.
 #
 
 """Main project development commands.
 
 Notes:
 - `c.run` uses the bash shell by default.
-- `c.run` runs the commands in an isolated subprocess.
+- `c.run` runs the commands in isolated subprocesses.
 """
-
-import re
 
 from invoke import task
 from invoke.exceptions import UnexpectedExit
 
 
-def docker_services_cli_up(c):
-    """Start services for tests.
-
-    :param c: invoke.Context
-
-    Returns dict of exported environment variables.
-    """
-    result = c.run(
-        'docker-services-cli up --db postgresql --search opensearch2 --mq rabbitmq --cache redis --env',  # noqa
-        hide=True
-    )
-    out = result.stdout
-    envs_assignments = re.findall('^export (.+)$', out, flags=re.M)
-    env = dict([ea.split("=", 1) for ea in envs_assignments])
-    return env
-
-
-def docker_services_cli_down(c, session=False, env=None):
-    """Stop services for tests unless in a testing session."""
-    if not session:
-        c.run('docker-services-cli down', env=env)
-
-
 @task
 def test(c, color=True, passthru="", session=False):
     """Run tests."""
-    env = docker_services_cli_up(c)
+    # docker-services-cli outputs bash export commands meant to be eval'ed
+    # to get environment variables . Because c (Invoke Context object) is
+    # not stateful, we need to extract the **evaluated** environment
+    # variables into a dict that can be passed around to subsequent
+    # commands.
+    result = c.run(
+        'eval "$(docker-services-cli up --db postgresql --search opensearch2 --mq rabbitmq --cache redis --env)"'  # noqa
+        " && env",
+        hide=True,
+    )
+    env = dict([l.split("=", 1) for l in result.stdout.split("\n") if l])
+
     try:
         c.run(f"python -m pytest {passthru}", pty=color, env=env)
     except UnexpectedExit:
         pass
     finally:
-        docker_services_cli_down(c, session, env=env)
+        if not session:
+            c.run('docker-services-cli down', env=env)
 
 
 @task
