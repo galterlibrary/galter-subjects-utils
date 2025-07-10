@@ -34,7 +34,6 @@ def app_config(app_config):
                 "invenio_jsonschemas.proxies.current_refresolver_store"
             ),
             "MAIL_DEFAULT_SENDER": ("Prism", "no-reply@localhost"),
-            "SEARCH_HOSTS": [{'host': 'localhost', 'port': 9200}],
             # Uncomment to investigate SQL queries
             # 'SQLALCHEMY_ECHO': True,
         }
