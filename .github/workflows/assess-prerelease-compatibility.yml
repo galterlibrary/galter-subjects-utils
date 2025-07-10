@@ -1,0 +1,25 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2023-2025 Northwestern University.
+#
+
+# Make sure to subscribe to notifications
+# See https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs
+# Also note that at time of writing GitHub unfortunately only notifies
+# the last person to have changed the cron schedule
+name: Assess compatibility with pre-release version of InvenioRDM
+
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # Run every Wednesday at 6:04am UTC (1:04 am EDT)
+    - cron: "4 6 * * 3"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason"
+        required: false
+        default: "Manual trigger"
+jobs:
+  assess-prerelease:
+    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-assess-prerelease-compatibility.yml@main

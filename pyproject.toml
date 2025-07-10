@@ -43,7 +43,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 scripts = {galter-subjects-utils = "galter_subjects_utils.cli:main"}
 urls = {Repository = "https://github.com/galterlibrary/galter-subjects-utils"}
-version = "0.7.0pre"
+version = "0.7.0"
 
 [project.optional-dependencies]
 dev = [

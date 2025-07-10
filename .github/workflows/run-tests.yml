@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2023-2024 Northwestern University.
+# Copyright (C) 2023-2025 Northwestern University.
 #
 
 name: Tests for galter-subjects-utils
@@ -18,11 +18,11 @@ on:
         default: 'Manual trigger'
 
 jobs:
-  Tests:
-    runs-on: ubuntu-22.04
+  tests-stable:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-          python-version: ["3.9", "3.11", "3.12"]
+          python-version: ["3.9", "3.11", "3.12", "3.13"]
           requirements-level: [pypi]
 
     steps:

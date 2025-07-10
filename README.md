@@ -31,7 +31,7 @@ This repository follows [semantic versioning](https://semver.org/) indexed on in
 | 0.7.X                 | 13.X                    |
 | 0.5.X, 0.6.x          | 12.X                    |
 
-This just means for example that version 0.3 guarantees generation of subjects files and subject manipulation compatible with invenio-app-rdm v11. When there is a break in subjects format, this tool will bump its major version.
+This just means for example that version 0.7 guarantees generation of subjects files and subject manipulation compatible with invenio-app-rdm v13. When there is a break in subjects format, this tool will bump its major version.
 
 ## Usage
 
