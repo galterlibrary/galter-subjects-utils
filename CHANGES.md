@@ -1,5 +1,9 @@
 # Changes
 
+Version 0.7.0 (released 2025-07-14)
+
+- Now supporting InvenioRDM v13 and dropping support for v12
+
 Version 0.6.0 (released 2025-06-05)
 
 - Change interface of `galter_subjects lcsh deprecated`, `galter_subjects lcsh replacements`, `galter_subjects lcsh deltas`
