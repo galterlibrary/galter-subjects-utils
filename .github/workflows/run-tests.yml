@@ -3,8 +3,6 @@
 # Copyright (C) 2023-2025 Northwestern University.
 #
 
-name: Tests for galter-subjects-utils
-
 on:
   push:
     branches: [master]
@@ -22,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-          python-version: ["3.9", "3.11", "3.12", "3.13"]
+          python-version: ["3.9", "3.11", "3.14"]
           requirements-level: [pypi]
 
     steps:
