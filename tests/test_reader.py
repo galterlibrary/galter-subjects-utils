@@ -105,5 +105,6 @@ def test_get_rdm_subjects(running_app, create_subject_data):
     ]
 
     subjects = [s for s in get_rdm_subjects(scheme="foo")]
+
     assert 3 == len(subjects)
     assert {"0", "1", "2"} == {e["subject"] for e in subjects}
