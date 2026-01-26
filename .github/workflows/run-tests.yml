@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2023-2025 Northwestern University.
+# Copyright (C) 2023-2026 Northwestern University.
 #
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
   pull_request:
-    branches: [master]
+    branches:
+      - master
   workflow_dispatch:
     inputs:
       reason:
@@ -16,27 +18,5 @@ on:
         default: 'Manual trigger'
 
 jobs:
-  tests-stable:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-          python-version: ["3.9", "3.11", "3.14"]
-          requirements-level: [pypi]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          pip install .[dev]
-          pip freeze
-
-      - name: Run tests
-        run: |
-          invoke test --no-color
+  tests:
+    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-tests-python.yml@main

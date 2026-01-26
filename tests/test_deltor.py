@@ -21,8 +21,8 @@ def subject_B():
     return Subject(id="subject_b", label="Subject B")
 
 
-class TestScheme(Scheme):
-    """Test subjet kind."""
+class FakeScheme(Scheme):
+    """Fake subjet kind for tests."""
 
     def __init__(self):
         """Constructor"""
@@ -32,7 +32,7 @@ class TestScheme(Scheme):
         )
 
 
-scheme_for_tests = TestScheme()
+scheme_for_tests = FakeScheme()
 
 
 # Test Add
