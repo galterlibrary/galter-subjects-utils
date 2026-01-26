@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2023-2024 Northwestern University.
+# Copyright (C) 2023-2026 Northwestern University.
 #
 # galter-subjects-utils is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -8,29 +8,58 @@
 
 """Command line tool."""
 
+import importlib
 from datetime import date
 from pathlib import Path
 
 import click
 from flask.cli import with_appcontext
 
-from .contrib.lcsh.cli import lcsh
-from .contrib.mesh.cli import mesh
 from .keeptrace import KeepTrace
 from .reader import read_csv
 from .updater import SubjectDeltaUpdater
 from .writer import SubjectDeltaLogger
 
 
-@click.group()
+class ClickGroupEnhancedByEntrypointGroup(click.Group):
+    """Dynamically registers commands from entrypoint_group under it."""
+
+    def __init__(
+        self, name=None, entrypoint_group=None, **kwargs
+    ):
+        """Constructor."""
+        super().__init__(name=name, **kwargs)
+        self.entrypoint_group = entrypoint_group
+
+    def _load_sub_clis(self):
+        """Load sub clis."""
+        entrypoints = importlib.metadata.entry_points(
+            group=self.entrypoint_group
+        )
+        for ep in entrypoints:
+            command = ep.load()
+            self.add_command(command)
+
+    def list_commands(self, ctx):
+        """List commands (e.g., when --help is passed)."""
+        self._load_sub_clis()
+        return super().list_commands(ctx)
+
+    def get_command(self, ctx, name):
+        """Retrieve command (e.g., when galter_subjects <subject> called)."""
+        self._load_sub_clis()
+        return super().get_command(ctx, name)
+
+
+@click.group(
+    cls=ClickGroupEnhancedByEntrypointGroup,
+    entrypoint_group="galter_subjects_utils.cli",
+)
 def main():
     """A subjects CLI utility (mostly for InvenioRDM)."""
 
 
-main.add_command(lcsh)
-main.add_command(mesh)
-
-
+# --- Shared ---
 defaults = {
     "year": date.today().year,
     "filter": "topic-qualifier",
