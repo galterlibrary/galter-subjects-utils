@@ -1,5 +1,11 @@
 # Changes
 
+Version 0.8.0 (released 2026-01-29)
+
+- Drop support for Python 3.9
+- Switch to plugin system for subjects
+- Remove contrib/ for LCSH/MeSH
+
 Version 0.7.0 (released 2025-07-14)
 
 - Now supporting InvenioRDM v13 and dropping support for v12
