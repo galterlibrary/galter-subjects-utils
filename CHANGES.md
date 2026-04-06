@@ -1,5 +1,10 @@
 # Changes
 
+Version 0.9.0 (released 2026-04-07)
+
+- pin setuptools < 82 to shield against removal of pkg_resources from it
+  * InvenioRDM v14 has workarounds around it, so it can be unpinned then
+
 Version 0.8.0 (released 2026-01-29)
 
 - Drop support for Python 3.9
