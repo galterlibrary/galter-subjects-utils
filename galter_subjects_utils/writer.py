@@ -1,32 +1,29 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2021-2022 Northwestern University.
+# Copyright (C) 2021-2026 Northwestern University.
 #
 # galter-subjects-utils is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
 
-"""MeSH subjects_mesh.jsonl writer."""
+"""Writing utilities."""
 
 import csv
-import json
 from datetime import datetime
 from io import StringIO
-from pathlib import Path
+
+import orjson as json
 
 
-def write_jsonl(
-    entries,
-    filepath=Path(__file__).parent / "vocabularies/subjects_mesh.jsonl"
-):
-    """Write the MeSH jsonl file.
+def write_jsonl(entries, filepath):
+    """Write the jsonl file.
 
     Return filepath to written file.
     """
-    with open(filepath, "w") as f:
+    with open(filepath, "wb") as f:
         for entry in entries:
-            json.dump(entry, f)
-            f.write("\n")
+            f.write(json.dumps(entry, f))
+            f.write("\n".encode("utf-8"))
 
     return filepath
 
