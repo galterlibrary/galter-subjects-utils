@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2021-2024 Northwestern University.
+# Copyright (C) 2021-2026 Northwestern University.
 #
 # galter-subjects-utils is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -9,8 +9,8 @@
 """Generic reader functionality."""
 
 import csv
-import json
 
+import orjson as json
 from invenio_db import db
 from invenio_vocabularies.contrib.subjects.models import SubjectsMetadata
 from sqlalchemy import bindparam, select, text
@@ -19,8 +19,7 @@ from sqlalchemy import bindparam, select, text
 def read_jsonl(filepath):
     """KISS jsonl file reader."""
     with open(filepath) as f:
-        for line in f:
-            yield json.loads(line)
+        yield from (json.loads(line) for line in f)
 
 
 def read_csv(filepath, reader_kwargs=None):
