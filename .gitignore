@@ -70,3 +70,6 @@ target/
 # Only keep the downloads folder
 tests/downloads/*
 !tests/downloads/.gitkeep
+
+# Misc
+debug/

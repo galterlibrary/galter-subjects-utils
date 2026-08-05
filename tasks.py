@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Northwestern University.
+# Copyright (C) 2024-2026 Northwestern University.
 #
 
 """Main project development commands.
@@ -34,12 +34,6 @@ def test(c, color=True, passthru="", session=False):
     finally:
         if not session:
             c.run('docker-services-cli down', env=env)
-
-
-@task
-def check_manifest(c, passthru=""):
-    """Check manifest."""
-    c.run(f"python -m check_manifest --no-build-isolation {passthru}")
 
 
 @task
