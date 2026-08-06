@@ -19,4 +19,4 @@ on:
 
 jobs:
   tests:
-    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-tests-python.yml@main
+    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-python-run-tests.yml@main

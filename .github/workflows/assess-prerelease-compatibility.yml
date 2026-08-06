@@ -22,4 +22,4 @@ on:
         default: "Manual trigger"
 jobs:
   assess-prerelease:
-    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-python-assess-prerelease-compat.yml@main
+    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-python-assess-prerelease-compatibility.yml@main
