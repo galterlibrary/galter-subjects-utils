@@ -1,5 +1,10 @@
 # Changes
 
+Version 0.11.0 (released 2026-08-05)
+
+- switch from setuptools to hatchling build system
+- make compatible with RDMv14
+
 Version 0.9.0 (released 2026-04-07)
 
 - pin setuptools < 82 to shield against removal of pkg_resources from it

@@ -8,7 +8,7 @@
 
 This distribution package provides an invenio subcommand group to manage controlled vocabulary subjects.
 
-In particular, it provides functionality to
+In particular, it provides functionality to:
 
 - generate and update the initial list of subject terms for a vocabulary distribution package.
 - update a running instance's subjects by analyzing the delta between the instance and the updated target list of terms.
