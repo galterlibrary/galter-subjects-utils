@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2023-2025 Northwestern University.
+# Copyright (C) 2023-2026 Northwestern University.
 #
 
 # Make sure to subscribe to notifications
@@ -22,4 +22,4 @@ on:
         default: "Manual trigger"
 jobs:
   assess-prerelease:
-    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-assess-prerelease-compatibility.yml@main
+    uses: galterlibrary/reusable-workflows/.github/workflows/inveniordm-python-assess-prerelease-compat.yml@main
