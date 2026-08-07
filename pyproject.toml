@@ -65,7 +65,12 @@ galter_subjects = "galter_subjects_utils.cli:main"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/galter_subject_utils",
+  "galter_subjects_utils",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "galter_subjects_utils",
 ]
 
 [tool.pydocstyle]
