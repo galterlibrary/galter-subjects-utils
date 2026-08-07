@@ -39,7 +39,7 @@ This just means for example that version 0.7 guarantees generation of subjects f
 In virtualenv (`(venv)` denotes that going forward):
 
 ```bash
-(venv) invenio galter-subjects --help
+(venv) invenio galter_subjects --help
 ```
 
 ## Development
