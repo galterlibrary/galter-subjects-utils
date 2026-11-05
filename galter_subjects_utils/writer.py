@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2021-2026 Northwestern University.
 #
@@ -23,7 +22,7 @@ def write_jsonl(entries, filepath):
     with open(filepath, "wb") as f:
         for entry in entries:
             f.write(json.dumps(entry, f))
-            f.write("\n".encode("utf-8"))
+            f.write(b"\n")
 
     return filepath
 
@@ -48,7 +47,7 @@ class SubjectDeltaLogger:
             # In memory
             self.f = StringIO()
         else:
-            self.f = open(filepath, "w+", newline='')
+            self.f = open(filepath, "w+", newline='')  # noqa
 
         self.header = ["pid", "time", "error", "deltas"]
         self.writer = csv.DictWriter(

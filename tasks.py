@@ -15,6 +15,7 @@ from invoke.exceptions import UnexpectedExit
 @task
 def test(c, color=True, passthru="", session=False):
     """Run tests."""
+    c.run("ruff check", pty=color)
     # docker-services-cli outputs bash export commands meant to be eval'ed
     # to get environment variables . Because c (Invoke Context object) is
     # not stateful, we need to extract the **evaluated** environment
@@ -25,7 +26,9 @@ def test(c, color=True, passthru="", session=False):
         " && env",
         hide=True,
     )
-    env = dict([l.split("=", 1) for l in result.stdout.split("\n") if l])
+    env = dict(
+        [line.split("=", 1) for line in result.stdout.split("\n") if line]
+    )
 
     try:
         c.run(f"python -m pytest {passthru}", pty=color, env=env)
