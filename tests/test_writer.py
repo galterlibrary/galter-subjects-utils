@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
 #
-# Copyright (C) 2021-2024 Northwestern University.
+# Copyright (C) 2021-2026 Northwestern University.
 #
 # galter-subjects-utils is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -52,15 +51,9 @@ def test_logging_corner_cases():
     # Log exception messages
     logger = SubjectDeltaLogger()
 
-    delta = {
-        "type": "remove",
-        "scheme": "foo",
-        "id": "A",
-    }
-
     try:
-        raise Exception("msg")
-    except Exception as e:
+        raise Exception("msg")  # noqa
+    except Exception as e:  # noqa
         logger.log("abcde-54321", error=str(e))
         logger.flush()
 

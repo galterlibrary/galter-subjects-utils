@@ -48,6 +48,7 @@ dev = [
     "invoke>=3.0,<4.0",
     "pytest-invenio>=4.0.1,<5.0.0",
     # pytest-invenio includes pytest & co and docker-services-cli
+    "ruff>=0.17.3,<2.0",
 ]
 
 dev_pre = [
@@ -56,6 +57,7 @@ dev_pre = [
     "invoke>=3.0,<4.0",
     "pytest-invenio>=4.0.1,<5.0.0",
     # pytest-invenio includes pytest & co and docker-services-cli
+    "ruff>=0.17.3,<2.0",
 ]
 
 [project.entry-points."flask.commands"]
@@ -73,22 +75,38 @@ packages = [
   "galter_subjects_utils",
 ]
 
-[tool.pydocstyle]
-add_ignore = ["D401", "D403"]
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = [
-    "--isort",
-    "--pydocstyle",
-    "--pycodestyle",
-    "--doctest-glob='*.rst'",
-    "--doctest-modules",
     "--cov=galter_subjects_utils",
     "--cov-report=term-missing",
     "--import-mode=importlib",
 ]
 testpaths = ["tests", "galter_subjects_utils"]
+
+# Start Ruff tooling ---
+[tool.ruff]
+# Set the maximum line length to 79.
+line-length = 79
+
+[tool.ruff.lint]
+# D: pydocstyle rule
+# E, W: all errors and warnings from pycodestyle
+# I: isort rule
+extend-select = ["D", "E", "I", "W"]
+# RUF100: unused noqa -> bug with ruff's understanding of line length
+# D401: imperative docstring -> too pedantic
+# D403: first word capitablized -> doesn't work with first words that start with capital but have other capital letters in them
+ignore = ["RUF100", "D401", "D403"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# D103: docstring required for public function -> ignore for test functions
+"tests/**.py" = ["D103"]
+
+# --- End Ruff tooling
 
 [tool.uv]
 # this is needed so that `uv run --extra dev_pre` doesn't

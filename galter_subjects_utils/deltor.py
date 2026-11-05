@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2024 Northwestern University.
 #
@@ -13,8 +12,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Analysis:
-    """
-    Holds results of analyzing a src subject.
+    """Holds results of analyzing a src subject.
 
     Can't be a namedtuple because it needs to be mutable.
     """

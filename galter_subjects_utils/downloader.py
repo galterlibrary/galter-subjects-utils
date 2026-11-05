@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2021-2023 Northwestern University.
 #
@@ -16,17 +15,18 @@ import requests
 
 def download_file(url, dest):
     """Download a file."""
-    with requests.get(url, stream=True) as req:
-        with open(dest, 'wb') as f:
-            shutil.copyfileobj(req.raw, f)
+    with requests.get(url, stream=True) as req, open(dest, 'wb') as f:
+        shutil.copyfileobj(req.raw, f)
 
     return dest
 
 
 def extract_file(in_filepath, out_filepath):
     """Extract gzipped file."""
-    with gzip.open(in_filepath, 'rb') as f_in:
-        with open(out_filepath, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
+    with (
+        gzip.open(in_filepath, 'rb') as f_in,
+        open(out_filepath, 'wb') as f_out,
+    ):
+        shutil.copyfileobj(f_in, f_out)
 
     return out_filepath

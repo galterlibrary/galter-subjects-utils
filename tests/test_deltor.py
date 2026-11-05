@@ -1,10 +1,12 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2024 Northwestern University.
 #
 # invenio-subjects-utils is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
+
+
+"""Test deltor."""
 
 from galter_subjects_utils.deltor import DeltasGenerator
 from galter_subjects_utils.scheme import Scheme
@@ -25,7 +27,7 @@ class FakeScheme(Scheme):
     """Fake subjet kind for tests."""
 
     def __init__(self):
-        """Constructor"""
+        """Constructor."""
         super().__init__(
             name="SCHEME",
             prefix="https://id.example.org/scheme/",
@@ -172,7 +174,7 @@ def subjects_replaced_by_renamed():
     This is to be used for the case where a subject is replaced by
     a pre-existing but relabelled subject.
     """
-    subject_original, subject_renamed = subjects_renamed()
+    _, subject_renamed = subjects_renamed()
     return (
         Subject(
             id="subject-to-replace-by-renamed",

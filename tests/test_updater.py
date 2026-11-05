@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2024 Northwestern University.
 #
@@ -361,7 +360,7 @@ def test_update_keep_trace(
 ):
     # Test that keep_trace template is placed in keep_trace field
     # if subject delta op is marked as keep_trace
-    subjects_data = [
+    [
         create_subject_data(
             system_identity,
             {
@@ -477,29 +476,26 @@ def test_update_keep_trace(
 def test_update_edge_case(
     create_subject_data, minimal_record_input, create_record_data_fn,
 ):
-    # Test edge any other edge case that pops up
+    # Test any other edge case that pops up
     # - subjects of records are deduplicated after modifications
 
-    # Assignments
-    subjects_data = [
-        create_subject_data(
-            system_identity,
-            {
-                "id": "http://example.org/zim/0",
-                "scheme": "zim",
-                "subject": "0",
-            },
-        ),
-        create_subject_data(
-            system_identity,
-            {
-                "id": "http://example.org/zim/0QA",
-                "scheme": "zim",
-                "subject": "0QA",
-            },
-        ),
-    ]
-
+    # Assignments (setup)
+    create_subject_data(
+        system_identity,
+        {
+            "id": "http://example.org/zim/0",
+            "scheme": "zim",
+            "subject": "0",
+        },
+    )
+    create_subject_data(
+        system_identity,
+        {
+            "id": "http://example.org/zim/0QA",
+            "scheme": "zim",
+            "subject": "0QA",
+        },
+    )
     record_input = copy.deepcopy(minimal_record_input)
     record_input["metadata"]["subjects"] = [
         {"subject": "0QA"},
@@ -507,7 +503,6 @@ def test_update_edge_case(
         {"id": "http://example.org/zim/0QA"},
     ]
     record_0_data = create_record_data_fn(system_identity, record_input)
-
     delta_ops = [
         {
             "type": "replace",

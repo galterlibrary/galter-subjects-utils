@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2024 Northwestern University.
 #
@@ -57,7 +56,7 @@ def op_replace(subjects, op_data):
         }
     ```
     """
-    idx, subject_dict = find_idx_subject_dict(subjects, op_data["id"])
+    idx, _ = find_idx_subject_dict(subjects, op_data["id"])
     if idx == -1:
         return False
     new_subject_dict = {
@@ -81,7 +80,7 @@ def op_remove(subjects, op_data):
         }
     ```
     """
-    idx, subject_dict = find_idx_subject_dict(subjects, op_data["id"])
+    idx, _ = find_idx_subject_dict(subjects, op_data["id"])
     if idx == -1:
         return False
     subjects.pop(idx)
@@ -101,11 +100,8 @@ def op_rename(subjects, op_data):
     leave a trace on the record as though the record used to have Y's
     previous label.
     """
-    idx, subject_dict = find_idx_subject_dict(subjects, op_data["id"])
-    if idx == -1:
-        return False
-    # no action as mentioned
-    return True
+    idx, _ = find_idx_subject_dict(subjects, op_data["id"])
+    return idx != -1
 
 
 def apply_op_data_change(op_data, orig_subjects, record):
@@ -138,7 +134,7 @@ def deduplicate_subjects(subjects):
 
     result = [_tuplify(d) for d in subjects]
     result = OrderedDict.fromkeys(result)  # rm duplicates AND keeps order
-    result = [dict([t]) for t in result.keys()]  # back to subjects
+    result = [dict([t]) for t in result]  # back to subjects
     return result
 
 
@@ -174,7 +170,7 @@ def update_rdm_record(record, ops_data, logger, keep_trace):
     try:
         commit_op.on_register(fake_uow)  # commits to DB
         commit_op.on_commit(fake_uow)  # reindexes in index
-    except Exception as e:
+    except Exception as e:  # noqa
         msg = re.sub(r"\s+", " ", str(e))
         logger.log(record.pid.pid_value, error=msg)
     finally:
