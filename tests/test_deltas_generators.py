@@ -8,76 +8,163 @@
 
 """Test delta generators."""
 
+import pytest
+
 from galter_subjects_utils.deltas_generators import (
-    DeltasGenerator as DeltasGenerator2,
+    DeltasGenerator as DeltasGeneratorV2,
 )
 from galter_subjects_utils.types_internal import Subject
 
 
-def test_deltas_generator_v2_replace_by_subject_with_other_scheme():
-    subject_scheme_a_to_replace_by_subject_scheme_b = Subject(
-        id="https://id.example.org/subject-scheme-A-to-replace-by-subject-scheme-B",  # noqa
-        scheme="SCHEME A",
-        label="Subject scheme A to replace by subject scheme B",
+@pytest.fixture()
+def subject_A():
+    """Subject without qualifier."""
+    return Subject(
+        id="https://id.example.org/subject_a",
+        scheme="SCHEME_A",
+        label="Subject A",
     )
-    subject_scheme_b = Subject(
-        id="https://id.example.org/subject-scheme-B",
-        scheme="SCHEME B",
-        label="Subject scheme B",
-    )
-    src = [subject_scheme_a_to_replace_by_subject_scheme_b, subject_scheme_b]
-    dst = [subject_scheme_b]
-    replacements = {
-        subject_scheme_a_to_replace_by_subject_scheme_b: subject_scheme_b,
-    }
 
-    deltor = DeltasGenerator2(src, dst, replacements)
+
+@pytest.fixture()
+def subject_A_scheme_and_label_changed(subject_A):
+    """Subject without qualifier."""
+    return Subject(
+        id=subject_A.id,
+        scheme="SCHEME_A_CHANGED",
+        label="Subject A changed",
+    )
+
+
+@pytest.fixture()
+def subject_B():
+    """Subject with qualifier."""
+    return Subject(
+        id="https://id.example.org/subject_b",
+        scheme="SCHEME_B",
+        label="Subject B"
+    )
+
+
+def test_deltas_generator_v2_add(subject_A, subject_B):
+    src = [subject_A]
+    dst = [subject_A, subject_B]
+    replacement = {}
+
+    deltor = DeltasGeneratorV2(src, dst, replacement)
     deltas = list(deltor.iter_deltas())
 
     expected = [
         {
-            "type": "replace",
-            "id_src": "https://id.example.org/subject-scheme-A-to-replace-by-subject-scheme-B",  # noqa
-            "scheme_src": "SCHEME A",
-            "subject_src": "Subject scheme A to replace by subject scheme B",
-            "id_dst": "https://id.example.org/subject-scheme-B",
-            "scheme_dst": "SCHEME B",
-            "subject_dst": "Subject scheme B",
+            "type": "add",
+            "id_dst": "https://id.example.org/subject_b",
+            "scheme_dst": "SCHEME_B",
+            "subject_dst": "Subject B",
         },
     ]
     assert expected == deltas
 
 
-def test_deltas_generator_v2_add_from_replacement():
-    assert False
-    # Questions
-    # what hapens when replacing by subject not in dst?
-    # dst = []
+def test_deltas_generator_v2_edit(
+    subject_A,
+    subject_A_scheme_and_label_changed,
+):
+    src = [subject_A]
+    dst = [subject_A_scheme_and_label_changed]
+    replacement = {}
 
-    # deltor = DeltasGenerator2(src, dst, replacements)
-    # ops = deltor.generate()
+    deltor = DeltasGeneratorV2(src, dst, replacement)
+    deltas = list(deltor.iter_deltas())
 
-    # expected = [
-    #     # contains add and rename operations to account for replacement
-    #     # scenarios
-    #     {
-    #         "type": "add",
-    #         "id_dst": "https://id.example.org/scheme/subject-scheme-B",
-    #         "scheme_dst": "SCHEME B",
-    #         "subject_dst": "Subject scheme B",
-    #     },
-    #     {
-    #         "type": "replace",
-    #         "id_src": "https://id.example.org/scheme/subject-scheme-A-to-replace-by-subject-scheme-B",  # noqa
-    #         "scheme_src": "SCHEME A",
-    #         "subject_src": "Subject scheme A to replace by subject scheme B",
-    #         "id_dst": "https://id.example.org/scheme/subject-scheme-B",
-    #         "scheme_dst": "SCHEME B",
-    #         "subject_dst": "Subject scheme B",
-    #     },
-    # ]
-    # assert expected == ops
+    expected = [
+        {
+            "type": "edit",
+            "id_src": subject_A.id,
+            "scheme_src": subject_A.scheme,
+            "subject_src": subject_A.label,
+            "scheme_dst": subject_A_scheme_and_label_changed.scheme,
+            "subject_dst": subject_A_scheme_and_label_changed.label,
+        },
+    ]
+    assert expected == deltas
+
+
+def test_deltas_generator_v2_replace_by_subject_with_other_scheme(
+    subject_A,
+    subject_B,
+):
+    # This also covers replacement in general
+    src = [subject_A, subject_B]
+    dst = [subject_B]
+    replacements = {
+        subject_A: subject_B,
+    }
+
+    deltor = DeltasGeneratorV2(src, dst, replacements)
+    deltas = list(deltor.iter_deltas())
+
+    expected = [
+        {
+            "type": "replace",
+            "id_src": subject_A.id,
+            "scheme_src": subject_A.scheme,
+            "subject_src": subject_A.label,
+            "id_dst": subject_B.id,
+            "scheme_dst": subject_B.scheme,
+            "subject_dst": subject_B.label,
+        },
+    ]
+    assert expected == deltas
+
+
+def test_deltas_generator_v2_add_from_replacement(subject_A, subject_B):
+    src = [subject_A]
+    dst = []
+    replacements = {
+        subject_A: subject_B,
+    }
+
+    deltor = DeltasGeneratorV2(src, dst, replacements)
+    deltas = list(deltor.iter_deltas())
+
+    expected = [
+        {
+            "type": "add",
+            "id_dst": subject_B.id,
+            "scheme_dst": subject_B.scheme,
+            "subject_dst": subject_B.label,
+        },
+        {
+            "type": "replace",
+            "id_src": subject_A.id,
+            "scheme_src": subject_A.scheme,
+            "subject_src": subject_A.label,
+            "id_dst": subject_B.id,
+            "scheme_dst": subject_B.scheme,
+            "subject_dst": subject_B.label,
+        },
+    ]
+    assert expected == deltas
 
 
 def test_deltas_generator_v2_replace_by_multiple_subjects():
     assert False
+
+
+def test_deltas_generator_v2_remove(subject_A):
+    src = [subject_A]
+    dst = []
+    replacements = {}
+
+    deltor = DeltasGeneratorV2(src, dst, replacements)
+    deltas = list(deltor.iter_deltas())
+
+    expected = [
+        {
+            "type": "remove",
+            "id_src": subject_A.id,
+            "scheme_src": subject_A.scheme,
+            "subject_src": subject_A.label,
+        },
+    ]
+    assert expected == deltas
