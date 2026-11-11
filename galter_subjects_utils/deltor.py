@@ -5,8 +5,9 @@
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
 
-"""Generate delta operations."""
+"""DEPRECATED. Generate delta operations."""
 
+import warnings
 from dataclasses import dataclass
 
 
@@ -37,6 +38,14 @@ class DeltasGenerator:
         :param replacements: mapping of src labels to dst labels
         :type replacements: dict[str, str]
         """
+        warnings.warn(
+            "galter_subjects_utils.deltor.DeltasGenerator is deprecated. "
+            "Use galter_subjects_utils.deltas_generators.DeltasGenerator "
+            "instead. Account for its change in interface.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         self.src_subjects = src_subjects
         self.dst_subjects = dst_subjects
         self.scheme = scheme
