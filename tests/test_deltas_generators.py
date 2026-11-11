@@ -18,7 +18,6 @@ from galter_subjects_utils.types_internal import Subject
 
 @pytest.fixture()
 def subject_A():
-    """Subject without qualifier."""
     return Subject(
         id="https://id.example.org/subject_a",
         scheme="SCHEME_A",
@@ -28,7 +27,6 @@ def subject_A():
 
 @pytest.fixture()
 def subject_A_scheme_and_label_changed(subject_A):
-    """Subject without qualifier."""
     return Subject(
         id=subject_A.id,
         scheme="SCHEME_A_CHANGED",
@@ -38,11 +36,18 @@ def subject_A_scheme_and_label_changed(subject_A):
 
 @pytest.fixture()
 def subject_B():
-    """Subject with qualifier."""
     return Subject(
         id="https://id.example.org/subject_b",
         scheme="SCHEME_B",
         label="Subject B"
+    )
+
+@pytest.fixture()
+def subject_C():
+    return Subject(
+        id="https://id.example.org/subject_c",
+        scheme="SCHEME_A",
+        label="Subject C",
     )
 
 
@@ -109,9 +114,9 @@ def test_deltas_generator_v2_replace_by_subject_with_other_scheme(
             "id_src": subject_A.id,
             "scheme_src": subject_A.scheme,
             "subject_src": subject_A.label,
-            "id_dst": subject_B.id,
-            "scheme_dst": subject_B.scheme,
-            "subject_dst": subject_B.label,
+            "id_dst": [subject_B.id],
+            "scheme_dst": [subject_B.scheme],
+            "subject_dst": [subject_B.label],
         },
     ]
     assert expected == deltas
@@ -139,16 +144,40 @@ def test_deltas_generator_v2_add_from_replacement(subject_A, subject_B):
             "id_src": subject_A.id,
             "scheme_src": subject_A.scheme,
             "subject_src": subject_A.label,
-            "id_dst": subject_B.id,
-            "scheme_dst": subject_B.scheme,
-            "subject_dst": subject_B.label,
+            "id_dst": [subject_B.id],
+            "scheme_dst": [subject_B.scheme],
+            "subject_dst": [subject_B.label],
         },
     ]
     assert expected == deltas
 
 
-def test_deltas_generator_v2_replace_by_multiple_subjects():
-    assert False
+def test_deltas_generator_v2_replace_by_multiple_subjects(
+    subject_A,
+    subject_B,
+    subject_C,
+):
+    src = [subject_A, subject_B, subject_C]
+    dst = [subject_B, subject_C]
+    replacements = {
+        subject_A: [subject_B, subject_C],
+    }
+
+    deltor = DeltasGeneratorV2(src, dst, replacements)
+    deltas = list(deltor.iter_deltas())
+
+    expected = [
+        {
+            "type": "replace",
+            "id_src": subject_A.id,
+            "scheme_src": subject_A.scheme,
+            "subject_src": subject_A.label,
+            "id_dst": [subject_B.id, subject_C.id],
+            "scheme_dst": [subject_B.scheme, subject_C.scheme],
+            "subject_dst": [subject_B.label, subject_C.label],
+        },
+    ]
+    assert expected == deltas
 
 
 def test_deltas_generator_v2_remove(subject_A):
