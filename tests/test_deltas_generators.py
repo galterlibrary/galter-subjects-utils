@@ -64,6 +64,7 @@ def test_deltas_generator_v2_add(subject_A, subject_B):
         Delta(
             type="add",
             subjects_dst=subject_B,
+            keep_trace=False,
         )
     ]
     assert expected == deltas
@@ -125,7 +126,7 @@ def test_deltas_generator_v2_add_from_replacement(subject_A, subject_B):
     deltas = list(deltor.iter_deltas())
 
     expected = [
-        Delta(type="add", subjects_dst=subject_B),
+        Delta(type="add", subjects_dst=subject_B, keep_trace=False),
         Delta(
             type="replace",
             subject_src=subject_A,

@@ -26,3 +26,4 @@ class Delta:
     type: str
     subject_src: Subject = None
     subjects_dst: tuple[Subject] = None
+    keep_trace: bool = True
