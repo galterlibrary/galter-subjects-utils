@@ -159,7 +159,8 @@ class DeltasGenerator:
         deltas_additions =  (
             Delta(
                 type="add",
-                subjects_dst=s
+                subjects_dst=(s,),
+                keep_trace=False,
             )
             for s in self._additions
         )

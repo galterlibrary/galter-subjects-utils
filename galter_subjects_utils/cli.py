@@ -16,6 +16,7 @@ from flask.cli import with_appcontext
 
 from .keeptrace import KeepTrace
 from .reader import read_csv
+from .serdes import DeltaSerdes
 from .updater import SubjectDeltaUpdater
 from .writer import SubjectDeltaLogger
 
@@ -87,7 +88,11 @@ keep_trace_tmpl_help = "Template with expandable '{subject}' to be saved."
 def update_subjects(**parameters):
     """Update subjects in running instance according to deltas file."""
     print("Updating subjects...")
-    deltas = [d for d in read_csv(parameters["deltas_file"])]
+    delta_serdes = DeltaSerdes()
+    deltas = [
+        delta_serdes.deserialize(d)
+        for d in read_csv(parameters["deltas_file"])
+    ]
     log_filepath = parameters["output_file"]
     logger = SubjectDeltaLogger(filepath=log_filepath)
     keep_trace = KeepTrace(
