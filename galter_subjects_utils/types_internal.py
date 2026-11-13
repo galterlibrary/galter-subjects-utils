@@ -17,3 +17,12 @@ class Subject:
     id: str
     label: str
     scheme: str = ""  # just for transition
+
+
+@dataclass(frozen=True, slots=True)
+class Delta:
+    """Minimalist delta datastructure."""
+
+    type: str
+    subject_src: Subject = None
+    subjects_dst: tuple[Subject] = None

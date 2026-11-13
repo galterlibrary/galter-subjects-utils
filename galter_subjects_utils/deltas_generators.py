@@ -10,7 +10,7 @@
 from dataclasses import dataclass
 from itertools import chain
 
-from .types_internal import Subject
+from .types_internal import Delta, Subject
 
 
 @dataclass
@@ -157,53 +157,41 @@ class DeltasGenerator:
         """Generate delta operations."""
         # Additions
         deltas_additions =  (
-            {
-                "type": "add",
-                "id_dst": s.id,
-                "scheme_dst": s.scheme,
-                "subject_dst": s.label,
-            }
+            Delta(
+                type="add",
+                subjects_dst=s
+            )
             for s in self._additions
         )
 
         # Edits
         deltas_edits = (
-            {
-                "type": "edit",
-                "id_src": a.subject.id,
-                "scheme_src": a.subject.scheme,
-                "subject_src": a.subject.label,
-                # "id_dst": "",  # same as id_src so omit
-                "scheme_dst": a.replaced[0].scheme,  # may be different
-                "subject_dst": a.replaced[0].label,  # may be different
-            }
+            Delta(
+                type="edit",
+                subject_src=a.subject,
+                subjects_dst=(a.replaced[0],),
+            )
             for a in self._src_subject_to_analysis.values()
             if a.edited
         )
 
         # Replaces
         deltas_replacements = (
-            {
-                "type": "replace",
-                "id_src": a.subject.id,
-                "scheme_src": a.subject.scheme,
-                "subject_src": a.subject.label,
-                "id_dst": [r.id for r in a.replaced],
-                "scheme_dst": [r.scheme for r in a.replaced],
-                "subject_dst": [r.label for r in a.replaced],
-            }
+            Delta(
+                type="replace",
+                subject_src=a.subject,
+                subjects_dst=tuple(a.replaced),
+            )
             for a in self._src_subject_to_analysis.values()
             if a.replaced and not a.edited
         )
 
         # Removes
         deltas_removals = (
-            {
-                "type": "remove",
-                "id_src": a.subject.id,
-                "scheme_src": a.subject.scheme,
-                "subject_src": a.subject.label,
-            }
+            Delta(
+                type="remove",
+                subject_src=a.subject,
+            )
             for a in self._src_subject_to_analysis.values()
             if not a.seen and not a.replaced
         )

@@ -13,7 +13,7 @@ import pytest
 from galter_subjects_utils.deltas_generators import (
     DeltasGenerator as DeltasGeneratorV2,
 )
-from galter_subjects_utils.types_internal import Subject
+from galter_subjects_utils.types_internal import Delta, Subject
 
 
 @pytest.fixture()
@@ -39,8 +39,9 @@ def subject_B():
     return Subject(
         id="https://id.example.org/subject_b",
         scheme="SCHEME_B",
-        label="Subject B"
+        label="Subject B",
     )
+
 
 @pytest.fixture()
 def subject_C():
@@ -60,12 +61,10 @@ def test_deltas_generator_v2_add(subject_A, subject_B):
     deltas = list(deltor.iter_deltas())
 
     expected = [
-        {
-            "type": "add",
-            "id_dst": "https://id.example.org/subject_b",
-            "scheme_dst": "SCHEME_B",
-            "subject_dst": "Subject B",
-        },
+        Delta(
+            type="add",
+            subjects_dst=subject_B,
+        )
     ]
     assert expected == deltas
 
@@ -82,14 +81,11 @@ def test_deltas_generator_v2_edit(
     deltas = list(deltor.iter_deltas())
 
     expected = [
-        {
-            "type": "edit",
-            "id_src": subject_A.id,
-            "scheme_src": subject_A.scheme,
-            "subject_src": subject_A.label,
-            "scheme_dst": subject_A_scheme_and_label_changed.scheme,
-            "subject_dst": subject_A_scheme_and_label_changed.label,
-        },
+        Delta(
+            type="edit",
+            subject_src=subject_A,
+            subjects_dst=(subject_A_scheme_and_label_changed,),
+        ),
     ]
     assert expected == deltas
 
@@ -109,15 +105,11 @@ def test_deltas_generator_v2_replace_by_subject_with_other_scheme(
     deltas = list(deltor.iter_deltas())
 
     expected = [
-        {
-            "type": "replace",
-            "id_src": subject_A.id,
-            "scheme_src": subject_A.scheme,
-            "subject_src": subject_A.label,
-            "id_dst": [subject_B.id],
-            "scheme_dst": [subject_B.scheme],
-            "subject_dst": [subject_B.label],
-        },
+        Delta(
+            type="replace",
+            subject_src=subject_A,
+            subjects_dst=(subject_B,),
+        )
     ]
     assert expected == deltas
 
@@ -133,21 +125,12 @@ def test_deltas_generator_v2_add_from_replacement(subject_A, subject_B):
     deltas = list(deltor.iter_deltas())
 
     expected = [
-        {
-            "type": "add",
-            "id_dst": subject_B.id,
-            "scheme_dst": subject_B.scheme,
-            "subject_dst": subject_B.label,
-        },
-        {
-            "type": "replace",
-            "id_src": subject_A.id,
-            "scheme_src": subject_A.scheme,
-            "subject_src": subject_A.label,
-            "id_dst": [subject_B.id],
-            "scheme_dst": [subject_B.scheme],
-            "subject_dst": [subject_B.label],
-        },
+        Delta(type="add", subjects_dst=subject_B),
+        Delta(
+            type="replace",
+            subject_src=subject_A,
+            subjects_dst=(subject_B,),
+        ),
     ]
     assert expected == deltas
 
@@ -167,15 +150,11 @@ def test_deltas_generator_v2_replace_by_multiple_subjects(
     deltas = list(deltor.iter_deltas())
 
     expected = [
-        {
-            "type": "replace",
-            "id_src": subject_A.id,
-            "scheme_src": subject_A.scheme,
-            "subject_src": subject_A.label,
-            "id_dst": [subject_B.id, subject_C.id],
-            "scheme_dst": [subject_B.scheme, subject_C.scheme],
-            "subject_dst": [subject_B.label, subject_C.label],
-        },
+        Delta(
+            type="replace",
+            subject_src=subject_A,
+            subjects_dst=(subject_B, subject_C),
+        ),
     ]
     assert expected == deltas
 
@@ -189,11 +168,6 @@ def test_deltas_generator_v2_remove(subject_A):
     deltas = list(deltor.iter_deltas())
 
     expected = [
-        {
-            "type": "remove",
-            "id_src": subject_A.id,
-            "scheme_src": subject_A.scheme,
-            "subject_src": subject_A.label,
-        },
+        Delta(type="remove", subject_src=subject_A),
     ]
     assert expected == deltas
