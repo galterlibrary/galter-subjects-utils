@@ -65,6 +65,11 @@ class SubjectDeltaLogger:
         An impromptu change in pid will clear out any accumulated data.
         `log(error=...)` is typically called on its own to fill the error
         portion.
+
+        Args:
+            pid (str) : persistent identifier of record being logged
+            delta (Delta, optional) : delta operation
+            error (str, optional) : problem with delta operation if any
         """
         if self.pid != pid:
             self.clear()
@@ -72,12 +77,16 @@ class SubjectDeltaLogger:
         self.pid = pid
 
         if delta:
-            if delta["type"] == "replace":
-                delta_msg = f"{delta['id']} -> {delta['new_id']}"
-            elif delta["type"] == "remove":
-                delta_msg = f"{delta['id']} -> X"
-            elif delta["type"] == "rename":
-                delta_msg = f"{delta['id']} {delta['subject']} -> {delta['new_subject']}"  # noqa
+            id_of_src = delta.subject_src.id
+            if delta.type == "replace":
+                replacements_joined = " ; ".join(s.id for s in delta.subjects_dst)  # noqa
+                delta_msg = f"{id_of_src} -> [{replacements_joined}]"
+            elif delta.type == "remove":
+                delta_msg = f"{id_of_src} -> X"
+            elif delta.type == "edit":
+                from_msg = f"{id_of_src} {delta.subject_src.scheme} {delta.subject_src.label}"  # noqa
+                to_msg = f"{delta.subjects_dst[0].scheme} {delta.subjects_dst[0].label}"  # noqa
+                delta_msg = f"{from_msg} -> {to_msg}"
             else:
                 return
 

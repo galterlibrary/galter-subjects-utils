@@ -15,7 +15,8 @@ class Subject:
     """Minimalist subject data."""
 
     id: str
-    label: str
+    label: str  # This is the more accurate term for what InvenioRDM *also*
+                # calls a "subject"
     scheme: str = ""  # just for transition
 
 

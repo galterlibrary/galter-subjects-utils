@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2024 Northwestern University.
+# Copyright (C) 2024-2026 Northwestern University.
 #
 # galter-subjects-utils is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
@@ -16,25 +16,6 @@ class KeepTrace:
 
     field: str  # dotted path to field
     template: str
-    yes = "Y"
-    no = "N"
-    keep_trace_key = "keep_trace"
-
-    @classmethod
-    def mark(cls, ops_data, yes_logic):
-        """Mark ops_data in-place to keep trace or not depending on yes_logic.
-
-        :param ops_data: operation data
-        :type ops_data: List[dict] (list of subject op data)
-        :param yes_logic: function to determine if op_data should be marked
-        :type yes_logic: function(op_data) -> Bool
-        """
-        for op_data in ops_data:
-            op_data[cls.keep_trace_key] = cls.yes if yes_logic(op_data) else cls.no  # noqa
-
-    def should_trace(self, op_data):
-        """Determine if op_data should trace."""
-        return op_data.get(self.keep_trace_key, "").lower() == self.yes.lower()
 
     def trace(self, record, subject):
         """Save expanded `self.template` at `self.field` in record."""
