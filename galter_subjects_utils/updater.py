@@ -21,13 +21,19 @@ from invenio_search.engine import search
 from sqlalchemy import delete, select
 
 from .keeptrace import KeepTrace
+from .serdes import SubjectRDMSerdes
 
 bulk = search.helpers.bulk
 
 
-def filter_ops_by_type(ops_data, _type):
-    """Filter ops_data by _type."""
-    return [op for op in ops_data if op.get("type") == _type]
+def filter_deltas_by_type(deltas, _type):
+    """Filter deltas by _type.
+
+    Args:
+        deltas (iter[Delta]) : deltas to filter
+        _type (str) : delta type to filter for
+    """
+    return (d for d in deltas if d.type == _type)
 
 
 def find_idx_subject_dict(subjects, id_):
@@ -41,53 +47,48 @@ def find_idx_subject_dict(subjects, id_):
     )
 
 
-def op_replace(subjects, op_data):
+def op_replace(subjects, delta):
     """Replace subject in-place.
 
-    op_data:
-
-    ```python
-        {
-            "type": "replace",
-            "scheme": "...",
-            "id": "...",
-            "new_id": "...",
-            "new_subject": "..."
-        }
-    ```
+    Args:
+        subjects (list[dict - RDM subject shape]) : a record's subjects
+        delta (Delta) : delta operation
     """
-    idx, _ = find_idx_subject_dict(subjects, op_data["id"])
+    idx, _ = find_idx_subject_dict(subjects, delta.subject_src.id)
+
     if idx == -1:
         return False
-    new_subject_dict = {
-        # **subject_dict,  # probably not needed
-        "id": op_data["new_id"],
-    }
-    subjects[idx] = new_subject_dict
+
+    for i, replacement in enumerate(delta.subjects_dst):
+        new_subject_dict = {
+            # Keeping as it was in the codebase before for now and just have id
+            "id": replacement.id,
+        }
+        # first replacement takes place of src subject
+        if i == 0:
+            subjects[idx] = new_subject_dict
+        # others are appended
+        else:
+            subjects.append(new_subject_dict)
+
     return True
 
 
-def op_remove(subjects, op_data):
+def op_remove(subjects, delta):
     """Remove subject in-place.
 
-    op_data:
-
-    ```python
-        {
-            "type": "remove",
-            "scheme": "...",
-            "id": "...",
-        }
-    ```
+    Args:
+        subjects (list[dict - RDM subject shape]) : original subjects
+        delta (Delta) : delta operation
     """
-    idx, _ = find_idx_subject_dict(subjects, op_data["id"])
+    idx, _ = find_idx_subject_dict(subjects, delta.subject_src.id)
     if idx == -1:
         return False
     subjects.pop(idx)
     return True
 
 
-def op_rename(subjects, op_data):
+def op_rename(subjects, delta):
     """Fake rename subject in-place.
 
     Renaming is not done at the record DB level since a record's subjects
@@ -100,20 +101,29 @@ def op_rename(subjects, op_data):
     leave a trace on the record as though the record used to have Y's
     previous label.
     """
-    idx, _ = find_idx_subject_dict(subjects, op_data["id"])
+    idx, _ = find_idx_subject_dict(subjects, delta.subject_src.id)
     return idx != -1
 
 
-def apply_op_data_change(op_data, orig_subjects, record):
-    """Apply `op_data` change on `record`."""
+def apply_op_data_change(delta, orig_subjects, record):
+    """Apply `delta` change on `record`.
+
+    Args:
+        delta (Delta) : delta operation
+        orig_subjects (list[dict - RDM subject shape]) : original subjects
+        record (Record) : record
+
+    Returns:
+        boolean : was the change applied or not
+    """
     subjects = record["metadata"]["subjects"]
     applied = False
-    if op_data.get("type") == "replace":
-        applied = op_replace(subjects, op_data)
-    elif op_data.get("type") == "remove":
-        applied = op_remove(subjects, op_data)
-    elif op_data.get("type") == "rename":
-        applied = op_rename(orig_subjects, op_data)
+    if delta.type == "replace":
+        applied = op_replace(subjects, delta)
+    elif delta.type == "remove":
+        applied = op_remove(subjects, delta)
+    elif delta.type == "edit":
+        applied = op_rename(orig_subjects, delta)
     return applied
 
 
@@ -138,20 +148,27 @@ def deduplicate_subjects(subjects):
     return result
 
 
-def update_rdm_record(record, ops_data, logger, keep_trace):
-    """Apply changes to record's subjects."""
+def update_rdm_record(record, deltas, logger, keep_trace):
+    """Apply changes to record's subjects.
+
+    Args:
+        record (Record) : record
+        deltas (iter[Delta]) : delta operations
+        logger (SubjectDeltaLogger): Logger object
+        keep_trace (KeepTrace) : KeepTrace object
+    """
     orig_subjects = copy.deepcopy(record["metadata"]["subjects"])
-    for op_data in ops_data:
+    for delta in deltas:
         applied = apply_op_data_change(
-            op_data,
+            delta,
             orig_subjects,
             record,
         )
 
         if applied:
-            if keep_trace.should_trace(op_data):
-                keep_trace.trace(record, op_data["subject"])
-            logger.log(record.pid.pid_value, delta=op_data)
+            if delta.keep_trace:
+                keep_trace.trace(record, delta.subject_src.label)
+            logger.log(record.pid.pid_value, delta=delta)
 
     # Make sure subjects are deduplicated
     record["metadata"]["subjects"] = deduplicate_subjects(
@@ -177,13 +194,13 @@ def update_rdm_record(record, ops_data, logger, keep_trace):
         logger.flush()
 
 
-def get_records_to_update(ops_data, data_cls):
+def get_records_to_update(deltas, data_cls):
     """Return data-layer records to update."""
 
-    def get_targeted_ids(ops_data):
+    def get_targeted_ids(deltas):
         return [
-            op["id"] for op in ops_data
-            if op.get("type") in ["replace", "remove", "rename"]
+            d.subject_src.id for d in deltas
+            if d.type in ["replace", "remove", "edit"]
         ]
 
     def has_at_least_1_subject_targeted(record_data_db, ids):
@@ -201,7 +218,7 @@ def get_records_to_update(ops_data, data_cls):
         subjects = record_data_db.get("metadata", {}).get("subjects", [])
         return any(s.get("id") in ids for s in subjects)
 
-    targeted_ids = frozenset(get_targeted_ids(ops_data))
+    targeted_ids = frozenset(get_targeted_ids(deltas))
 
     if not targeted_ids:
         return []
@@ -223,11 +240,18 @@ def get_records_to_update(ops_data, data_cls):
 class SubjectDeltaUpdater:
     """Translates delta operations into actual changes."""
 
-    def __init__(self, ops_data, logger, keep_trace):
-        """Constructor."""
-        self._ops_data = ops_data
+    def __init__(self, deltas, logger, keep_trace):
+        """Constructor.
+
+        Args:
+            deltas (list[Delta]): list of delta operatios.
+            logger (SubjectDeltaLogger): Logger object.
+            keep_trace (KeepTrace): KeepTrace object.
+        """
+        self._ops_data = deltas
         self._logger = logger
         self._keep_trace = keep_trace
+        self._subject_rdm_serdes = SubjectRDMSerdes()
 
     def update(self):
         """Execute changes."""
@@ -241,30 +265,22 @@ class SubjectDeltaUpdater:
     def _add_rdm_subjects(self):
         """Add to the Subjects entries."""
         service = current_service_registry.get("subjects")
-        add_ops = filter_ops_by_type(self._ops_data, "add")
+        add_ops = filter_deltas_by_type(self._ops_data, "add")
         for op in add_ops:
             service.create(
                 system_identity,
-                {
-                    "id": op["id"],
-                    "scheme": op["scheme"],
-                    "subject": op["subject"],
-                }
+                self._subject_rdm_serdes.serialize(op.subjects_dst[0]),
             )
 
     def _rename_rdm_subjects(self):
         """Rename subjects in the Subjects entries."""
         service = current_service_registry.get("subjects")
-        rename_ops = filter_ops_by_type(self._ops_data, "rename")
+        rename_ops = filter_deltas_by_type(self._ops_data, "edit")
         for op in rename_ops:
             service.update(
                 system_identity,
-                op["id"],
-                {
-                    "id": op["id"],
-                    "scheme": op["scheme"],
-                    "subject": op["new_subject"]
-                }
+                op.subject_src.id,
+                self._subject_rdm_serdes.serialize(op.subjects_dst[0]),
             )
 
     def _update_rdm_records(self):
@@ -273,7 +289,7 @@ class SubjectDeltaUpdater:
         for record in entries:
             update_rdm_record(
                 record,
-                ops_data=self._ops_data,
+                deltas=self._ops_data,
                 logger=self._logger,
                 keep_trace=self._keep_trace
             )
@@ -283,7 +299,7 @@ class SubjectDeltaUpdater:
         for draft in entries:
             update_rdm_record(
                 draft,
-                ops_data=self._ops_data,
+                deltas=self._ops_data,
                 logger=self._logger,
                 keep_trace=KeepTrace(None, None)  # noop KeepTrace
             )
@@ -296,8 +312,8 @@ class SubjectDeltaUpdater:
         and we should be fine (at least at time of writing).
         """
         ids_for_removal = [
-            op["id"] for op in self._ops_data
-            if op.get("type") in ["remove", "replace"]
+            d.subject_src.id for d in self._ops_data
+            if d.type in ["remove", "replace"]
         ]
         service = current_service_registry.get("subjects")
 

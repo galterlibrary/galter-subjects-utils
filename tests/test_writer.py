@@ -10,6 +10,7 @@
 from pathlib import Path
 
 from galter_subjects_utils.reader import read_jsonl
+from galter_subjects_utils.types_internal import Delta, Subject
 from galter_subjects_utils.writer import SubjectDeltaLogger, write_jsonl
 
 
@@ -63,22 +64,20 @@ def test_logging_corner_cases():
     # Log multiple deltas
     logger = SubjectDeltaLogger()
     deltas = [
-        {
-            "type": "remove",
-            "scheme": "foo",
-            "id": "A",
-        },
-        {
-            "type": "replace",
-            "scheme": "foo",
-            "id": "B",
-            "new_id": "D",
-        },
+        Delta(
+            type="remove",
+            subject_src=Subject(id="A", scheme="foo", label="Label A"),
+        ),
+        Delta(
+            type="replace",
+            subject_src=Subject(id="B", scheme="foo", label="Label B"),
+            subjects_dst=(Subject(id="D", scheme="foo", label="Label D"),),
+        )
     ]
     logger.log("abcde-12345", deltas[0])
     logger.log("abcde-12345", deltas[1])
     logger.flush()
     entries = logger.read()
-    deltas = "A -> X + B -> D"
+    deltas = "A -> X + B -> [D]"
     assert deltas == entries[0]["deltas"]
     assert "" == entries[0]["error"]

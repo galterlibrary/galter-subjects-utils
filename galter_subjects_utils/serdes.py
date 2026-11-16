@@ -115,7 +115,7 @@ class DeltaSerdes:
             Delta: Delta object for corresponding delta
         """
         type_ = delta_serialized["type"]
-        keep_trace = delta_serialized.get("keep_trace", "N") == "Y"
+        keep_trace = delta_serialized.get("keep_trace", "N").strip() == "Y"
 
         if type_ == "add":
             return Delta(
