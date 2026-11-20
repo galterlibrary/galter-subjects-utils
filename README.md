@@ -28,7 +28,7 @@ This repository follows [semantic versioning](https://semver.org/) indexed on in
 
 | galter-subjects-utils | invenio-app-rdm version |
 | --------------------- | ----------------------- |
-| 0.11.X                | 13.X + 14.X             |
+| 0.11.X, 0.12.X        | 13.X + 14.X             |
 | 0.7.X - 0.10.X        | 13.X                    |
 | 0.5.X, 0.6.x          | 12.X                    |
 
