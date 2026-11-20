@@ -1,5 +1,19 @@
 # Changes
 
+Version 0.12.0 (released 2026-11-20)
+
+*BREAKING CHANGES*
+- feat!: update according to newly generated deltas
+  - The expected deltas file format has changed.
+  - The interface to `SubjectDeltaUpdater` has changed
+  - The interface to `KeepTrace` has changed.
+  - The interface to `SubjectDeltaLogger` has changed.
+
+*OTHER CHANGES*
+- feat: support replacing 1 subject by many in generated deltas
+- feat: support replacing 1 subject in a scheme by another in another scheme in generated deltas
+- deprecate: deprecate deltor.py::DeltasGenerator
+
 Version 0.11.0 (released 2026-08-05)
 
 - switch from setuptools to hatchling build system
