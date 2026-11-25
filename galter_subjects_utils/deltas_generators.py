@@ -134,7 +134,7 @@ class DeltasGenerator:
 
             # Is the replacement entry new (not even in additions)?
             if (
-                subject_dst not in self._src_subject_to_analysis and
+                subject_dst.id not in self._src_subject_id_to_analysis and
                 # by now, all additions will have been computed
                 subject_dst not in self._additions
             ):
