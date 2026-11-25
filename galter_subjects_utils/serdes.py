@@ -74,7 +74,7 @@ class SubjectsDstSerdes:
                 subjects_dst_serialized.get("id_dst", "").splitlines()
             )
 
-        return (
+        return [
             Subject(
                 id=id_dst,
                 scheme=scheme_dst,
@@ -86,7 +86,7 @@ class SubjectsDstSerdes:
                 subjects_dst_serialized.get("scheme_dst", "").splitlines(),
                 subjects_dst_serialized.get("subject_dst", "").splitlines(),
             )
-        )
+        ]
 
     def serialize(self, subjects_dst):
         """Serialize."""
