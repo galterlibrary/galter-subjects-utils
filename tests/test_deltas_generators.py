@@ -115,7 +115,9 @@ def test_deltas_generator_v2_replace_by_subject_with_other_scheme(
     assert expected == deltas
 
 
-def test_deltas_generator_v2_add_from_replacement(subject_A, subject_B):
+def test_deltas_generator_v2_add_from_replacement(
+    subject_A, subject_B, subject_A_scheme_and_label_changed
+):
     src = [subject_A]
     dst = []
     replacements = {
@@ -131,6 +133,29 @@ def test_deltas_generator_v2_add_from_replacement(subject_A, subject_B):
             type="replace",
             subject_src=subject_A,
             subjects_dst=(subject_B,),
+        ),
+    ]
+    assert expected == deltas
+
+    # Edge case: When replacing Subject is an edited version of existing
+    #            Subject, no add from replacement should occur
+    src = [subject_A, subject_B]
+    dst = [subject_A_scheme_and_label_changed]
+    replacements = {subject_B: subject_A_scheme_and_label_changed}
+
+    deltor = DeltasGeneratorV2(src, dst, replacements)
+    deltas = list(deltor.iter_deltas())
+
+    expected = [
+        Delta(
+            type="edit",
+            subject_src=subject_A,
+            subjects_dst=(subject_A_scheme_and_label_changed,),
+        ),
+        Delta(
+            type="replace",
+            subject_src=subject_B,
+            subjects_dst=(subject_A_scheme_and_label_changed,),
         ),
     ]
     assert expected == deltas
