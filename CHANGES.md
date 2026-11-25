@@ -1,6 +1,13 @@
 # Changes
 
-Version 0.12.0 (released 2026-11-20)
+**Version 0.12.1 (released 2026-11-25)**
+
+- fix: listify SubjectsDstSerdes deserialization
+    * SubjectsDstSerdes.deserialize returns list[Subject] instead of iter[Subject]
+    * the change in interface is very minor and this is a fix, so not considered a breaking change
+- fix: don't add from replacement edited subjects
+
+**Version 0.12.0 (released 2026-11-20)**
 
 *BREAKING CHANGES*
 - feat!: update according to newly generated deltas
@@ -14,54 +21,54 @@ Version 0.12.0 (released 2026-11-20)
 - feat: support replacing 1 subject in a scheme by another in another scheme in generated deltas
 - deprecate: deprecate deltor.py::DeltasGenerator
 
-Version 0.11.0 (released 2026-08-05)
+**Version 0.11.0 (released 2026-08-05)**
 
 - switch from setuptools to hatchling build system
 - make compatible with RDMv14
 
-Version 0.9.0 (released 2026-04-07)
+**Version 0.9.0 (released 2026-04-07)**
 
 - pin setuptools < 82 to shield against removal of pkg_resources from it
   * InvenioRDM v14 has workarounds around it, so it can be unpinned then
 
-Version 0.8.0 (released 2026-01-29)
+**Version 0.8.0 (released 2026-01-29)**
 
 - Drop support for Python 3.9
 - Switch to plugin system for subjects
 - Remove contrib/ for LCSH/MeSH
 
-Version 0.7.0 (released 2025-07-14)
+**Version 0.7.0 (released 2025-07-14)**
 
 - Now supporting InvenioRDM v13 and dropping support for v12
 
-Version 0.6.0 (released 2025-06-05)
+**Version 0.6.0 (released 2025-06-05)**
 
 - Change interface of `galter_subjects lcsh deprecated`, `galter_subjects lcsh replacements`, `galter_subjects lcsh deltas`
 
-Version 0.5.1 (released 2025-01-21)
+**Version 0.5.1 (released 2025-01-21)**
 
 - Fix `lcsh file` command due to errant comma
 
-Version 0.4.2 (released 2024-05-22)
+**Version 0.4.2 (released 2024-05-22)**
 
 - Fix `mesh deltas` command due to missing prefix
 
-Version 0.4.1 (released 2024-04-08)
+**Version 0.4.1 (released 2024-04-08)**
 
 - Exclude -781 terms from file generation too
 
-Version 0.4.0 (released 2024-04-05)
+**Version 0.4.0 (released 2024-04-05)**
 
 - Support update of LCSH terms under new architecture
 
-Version 0.3.5 (released 2024-03-21)
+**Version 0.3.5 (released 2024-03-21)**
 
 - Rearchitecture to support updating subjects in a live instance.
 
-Version 0.2.0 (released 2023-11-06)
+**Version 0.2.0 (released 2023-11-06)**
 
 - Support LCSH terms.
 
-Version 0.1.0 (released 2023-10-30)
+**Version 0.1.0 (released 2023-10-30)**
 
 - Initial public release.
