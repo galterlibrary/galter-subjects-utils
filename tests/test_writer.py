@@ -55,11 +55,11 @@ def test_logging_corner_cases():
     try:
         raise Exception("msg")  # noqa
     except Exception as e:  # noqa
-        logger.log("abcde-54321", error=str(e))
+        logger.log("abcde-54321", msg=str(e))
         logger.flush()
 
     entries = logger.read()
-    assert "msg" == entries[0]["error"]
+    assert "msg" == entries[0]["msg"]
 
     # Log multiple deltas
     logger = SubjectDeltaLogger()
@@ -80,4 +80,4 @@ def test_logging_corner_cases():
     entries = logger.read()
     deltas = "A -> X + B -> [D]"
     assert deltas == entries[0]["deltas"]
-    assert "" == entries[0]["error"]
+    assert "" == entries[0]["msg"]

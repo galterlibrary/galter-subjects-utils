@@ -13,6 +13,7 @@ from collections import OrderedDict
 
 from invenio_access.permissions import system_identity
 from invenio_db import db
+from invenio_pidstore.errors import PIDAlreadyExists
 from invenio_pidstore.models import PersistentIdentifier
 from invenio_rdm_records.records import RDMDraft, RDMRecord
 from invenio_records_resources.proxies import current_service_registry
@@ -189,7 +190,7 @@ def update_rdm_record(record, deltas, logger, keep_trace):
         commit_op.on_commit(fake_uow)  # reindexes in index
     except Exception as e:  # noqa
         msg = re.sub(r"\s+", " ", str(e))
-        logger.log(record.pid.pid_value, error=msg)
+        logger.log(record.pid.pid_value, msg=msg)
     finally:
         logger.flush()
 
@@ -263,14 +264,21 @@ class SubjectDeltaUpdater:
         self._remove_rdm_subjects()
 
     def _add_rdm_subjects(self):
-        """Add to the Subjects entries."""
+        """Create subjects in instance from the add entries."""
         service = current_service_registry.get("subjects")
         add_ops = filter_deltas_by_type(self._ops_data, "add")
         for op in add_ops:
-            service.create(
-                system_identity,
-                self._subject_rdm_serdes.serialize(op.subjects_dst[0]),
-            )
+            try:
+                service.create(
+                    system_identity,
+                    self._subject_rdm_serdes.serialize(op.subjects_dst[0]),
+                )
+            except PIDAlreadyExists as e:
+                self._logger.log(
+                    pid=e.pid_value,
+                    msg=f"PID '{e.pid_value}' already exists. Addition ignored.",  # noqa
+                )
+                self._logger.flush()
 
     def _rename_rdm_subjects(self):
         """Rename subjects in the Subjects entries."""
@@ -291,7 +299,7 @@ class SubjectDeltaUpdater:
                 record,
                 deltas=self._ops_data,
                 logger=self._logger,
-                keep_trace=self._keep_trace
+                keep_trace=self._keep_trace,
             )
 
         # Don't keep trace for drafts
@@ -301,7 +309,7 @@ class SubjectDeltaUpdater:
                 draft,
                 deltas=self._ops_data,
                 logger=self._logger,
-                keep_trace=KeepTrace(None, None)  # noop KeepTrace
+                keep_trace=KeepTrace(None, None),  # noop KeepTrace
             )
 
     def _remove_rdm_subjects(self):

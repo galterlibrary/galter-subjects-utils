@@ -25,7 +25,7 @@ from galter_subjects_utils.writer import SubjectDeltaLogger
 
 # Fixtures
 @pytest.fixture(scope="module")
-def subjects_service():
+def subjects_service(app):
     return current_service_registry.get("subjects")
 
 
@@ -346,7 +346,7 @@ def test_update_logging(update_result, delta_logger, records_data_w_subjects):
     pid = records_data_w_subjects[0].pid.pid_value
     log_entry = next((e for e in log_entries if e.get("pid") == pid), None)
     assert log_entry and log_entry["time"]
-    assert "" == log_entry["error"]
+    assert "" == log_entry["msg"]
     msg = (
         "http://example.org/foo/1 foo 1 -> foo One + " +
         "http://example.org/foo/2 -> [http://example.org/foo/3]"
@@ -360,7 +360,7 @@ def test_update_logging(update_result, delta_logger, records_data_w_subjects):
         None
     )
     assert log_entry["time"]
-    assert "" == log_entry["error"]
+    assert "" == log_entry["msg"]
     msg = "http://example.org/foo/0 -> X"
     assert msg == log_entry["deltas"]
 
@@ -371,7 +371,7 @@ def test_update_logging(update_result, delta_logger, records_data_w_subjects):
         None
     )
     assert log_entry and log_entry["time"]
-    assert "" == log_entry["error"]
+    assert "" == log_entry["msg"]
     msg = "http://example.org/foo/2 -> [http://example.org/foo/3]"
     assert msg == log_entry["deltas"]
 
@@ -655,3 +655,46 @@ def test_update_multi_replace(
     )
     msg = "http://example.org/zum/0 -> [http://example.org/zum/1 ; http://example.org/zum/2]"  # noqa
     assert msg == log_entry["deltas"]
+
+
+def test_update_ignore_duplicate_subject_addition(
+    create_subject_data,
+    subjects_service,
+):
+    # Have a pre-existing subject and try to add it
+    subject = Subject(
+        id="https://example.org/baa/1",
+        scheme="BAA",
+        label="Baa 1",
+    )
+    subject_rdm_serdes = SubjectRDMSerdes()
+    subject_data = create_subject_data(
+        system_identity,
+        subject_rdm_serdes.serialize(subject),
+    )
+    delta_ops = [Delta(
+        type="add",
+        subjects_dst=(subject,),
+        keep_trace=False,
+    )]
+    delta_logger = SubjectDeltaLogger()
+    noop_keep_trace = KeepTrace(None, None)
+
+    # Actions
+    updater = SubjectDeltaUpdater(delta_ops, delta_logger, noop_keep_trace)
+    updater.update()
+    # passing with no exception raised is a criteria
+
+    # will raise if 2 rows found
+    assert subjects_service.read(system_identity, "https://example.org/baa/1")
+
+    # check message in log
+    entries_of_log = delta_logger.read()
+    pid_of_subject = subject_data.pid.pid_value
+    log_entry = next(
+        e for e in entries_of_log if e.get("pid") == pid_of_subject
+    )
+    expected = (
+        "PID 'https://example.org/baa/1' already exists. Addition ignored."
+    )
+    assert expected == log_entry["msg"]
