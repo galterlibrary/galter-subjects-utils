@@ -41,6 +41,12 @@ def write_csv(entries, filepath, writer_kwargs=None):
 class SubjectDeltaLogger:
     """Convenience logger for delta operations applied to records."""
 
+    def clear(self):
+        """Clear out the buffered data."""
+        self.pid = None
+        self.msg = None
+        self.deltas = []
+
     def __init__(self, filepath=None):
         """Constructor."""
         if not filepath:
@@ -49,7 +55,7 @@ class SubjectDeltaLogger:
         else:
             self.f = open(filepath, "w+", newline='')  # noqa
 
-        self.header = ["pid", "time", "error", "deltas"]
+        self.header = ["pid", "time", "msg", "deltas"]
         self.writer = csv.DictWriter(
             self.f, fieldnames=self.header
         )
@@ -57,7 +63,7 @@ class SubjectDeltaLogger:
 
         self.clear()
 
-    def log(self, pid, delta=None, error=None):
+    def log(self, pid, delta=None, msg=None):
         """Buffered log.
 
         Idea is to build up a log entry for pid with multiple deltas.
@@ -69,7 +75,7 @@ class SubjectDeltaLogger:
         Args:
             pid (str) : persistent identifier of record being logged
             delta (Delta, optional) : delta operation
-            error (str, optional) : problem with delta operation if any
+            msg (str, optional) : warning/problem with delta operation if any
         """
         if self.pid != pid:
             self.clear()
@@ -92,8 +98,8 @@ class SubjectDeltaLogger:
 
             self.deltas.append(delta_msg)
 
-        if error:
-            self.error = error
+        if msg:
+            self.msg = msg
 
     def flush(self):
         """Flush out the buffered entry."""
@@ -105,18 +111,12 @@ class SubjectDeltaLogger:
             {
                 "pid": self.pid,
                 "time": datetime.now(),
-                "error": self.error,
-                "deltas": " + ".join(self.deltas)
+                "msg": self.msg,
+                "deltas": " + ".join(self.deltas),
             }
         )
 
         self.clear()
-
-    def clear(self):
-        """Clear out the buffered data."""
-        self.pid = None
-        self.error = None
-        self.deltas = []
 
     def close(self):
         """Close file."""
