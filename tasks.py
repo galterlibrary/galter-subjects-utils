@@ -7,6 +7,8 @@ Notes:
 - `c.run` uses the bash shell by default.
 - `c.run` runs the commands in isolated subprocesses.
 """
+import subprocess
+import sys
 
 from invoke import task
 from invoke.exceptions import UnexpectedExit
@@ -29,9 +31,18 @@ def test(c, color=True, passthru="", session=False):
     env = dict(
         [line.split("=", 1) for line in result.stdout.split("\n") if line]
     )
-
     try:
-        c.run(f"python -m pytest {passthru}", pty=color, env=env)
+        # This is actually required to make breakpoint() work because of
+        # bug in invoke itself.
+        subprocess.call(
+            [
+                sys.executable,
+                "-m", "pytest",
+                "--capture", "no",
+                *passthru.split()
+            ],
+            env=env,
+        )
     except UnexpectedExit:
         pass
     finally:
