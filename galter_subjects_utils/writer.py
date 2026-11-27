@@ -44,7 +44,7 @@ class SubjectDeltaLogger:
     def clear(self):
         """Clear out the buffered data."""
         self.pid = None
-        self.msg = None
+        self.msgs = []
         self.deltas = []
 
     def __init__(self, filepath=None):
@@ -69,8 +69,6 @@ class SubjectDeltaLogger:
         Idea is to build up a log entry for pid with multiple deltas.
         The actual logging is only written out when flush() is called.
         An impromptu change in pid will clear out any accumulated data.
-        `log(error=...)` is typically called on its own to fill the error
-        portion.
 
         Args:
             pid (str) : persistent identifier of record being logged
@@ -99,7 +97,7 @@ class SubjectDeltaLogger:
             self.deltas.append(delta_msg)
 
         if msg:
-            self.msg = msg
+            self.msgs.append(msg)
 
     def flush(self):
         """Flush out the buffered entry."""
@@ -111,7 +109,7 @@ class SubjectDeltaLogger:
             {
                 "pid": self.pid,
                 "time": datetime.now(),
-                "msg": self.msg,
+                "msg": " + ".join(self.msgs),
                 "deltas": " + ".join(self.deltas),
             }
         )
