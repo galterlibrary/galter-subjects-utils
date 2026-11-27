@@ -102,3 +102,4 @@ def update_subjects(**parameters):
     updater = SubjectDeltaUpdater(deltas, logger, keep_trace)
     updater.update()
     print(f"Log of updated records written here {log_filepath}")
+    logger.close()
