@@ -23,6 +23,7 @@ from sqlalchemy import delete, select
 
 from .keeptrace import KeepTrace
 from .serdes import SubjectRDMSerdes
+from .types_internal import Delta
 
 bulk = search.helpers.bulk
 
@@ -241,6 +242,7 @@ def get_records_to_update(deltas, data_cls):
 class SubjectDeltaUpdater:
     """Translates delta operations into actual changes."""
 
+
     def __init__(self, deltas, logger, keep_trace):
         """Constructor.
 
@@ -249,70 +251,153 @@ class SubjectDeltaUpdater:
             logger (SubjectDeltaLogger): Logger object.
             keep_trace (KeepTrace): KeepTrace object.
         """
-        self._ops_data = deltas
         self._logger = logger
+        self._ops_data = deltas
         self._keep_trace = keep_trace
         self._subject_rdm_serdes = SubjectRDMSerdes()
 
+    def _remove_unlabelled_actions_from_delta(self, delta):
+        """Remove unlabelled actions from delta and return None if nothing left.
+
+        Only add, edit and replace Delta types are considered.
+
+        Args:
+            delta (Delta): delta under consideration
+
+        Returns:
+            Delta|None : same Delta, new modified Delta or None
+        """  # noqa
+        if delta.type == "add":
+            # For add, only 1 Subject in subjects_dst
+            subject_to_add = delta.subjects_dst[0]
+            if not subject_to_add.label:
+                self._logger.log(
+                    pid=subject_to_add.id,
+                    msg=f"PID '{subject_to_add.id}' is unlabelled. '{delta.type}' ignored.",  # noqa
+                )
+                self._logger.flush()
+                return None
+        elif delta.type == "edit":
+            # For edit, only 1 Subject in subjects_dst
+            subject_to_edit = delta.subjects_dst[0]
+            if not subject_to_edit.label:
+                self._logger.log(
+                    pid=delta.subject_src.id,
+                    msg=f"Label '{delta.subject_src.label}' would be removed. '{delta.type}' ignored.",  # noqa
+                )
+                self._logger.flush()
+                return None
+        elif delta.type == "replace":
+            # if no unlabelled replacements the delta can be returned
+            if all(s.label for s in delta.subjects_dst):
+                return delta
+            # Remove the unlabelled replacements and potentially return None
+            # if no replacements left
+            subjects_dst_labelled = []
+            for s in delta.subjects_dst:
+                if s.label:
+                    subjects_dst_labelled.append(s)
+                else:
+                    self._logger.log(
+                        pid=delta.subject_src.id,
+                        msg=f"Replacement PID '{s.id}' is unlabelled. '{delta.type}' ignored.",  # noqa
+                    )
+
+            self._logger.flush()
+
+            if len(subjects_dst_labelled) > 0:
+                return Delta(
+                    type=delta.type,
+                    subject_src=delta.subject_src,
+                    subjects_dst=tuple(subjects_dst_labelled),
+                    keep_trace=delta.keep_trace,
+                )
+            else:
+                return None
+
+        return delta
+
+    def _remove_unlabelled_actions_from_deltas(self, deltas):
+        """Strip deltas of unlabelled add, edit, replace actions.
+
+        Args:
+            deltas (iter[Delta]): raw Deltas with potentially empty labels
+
+        Returns:
+            list[Delta]: Deltas without unlabelled actions
+        """
+        result = [
+            self._remove_unlabelled_actions_from_delta(d) for d in deltas
+        ]
+        result = [d for d in result if d]  # remove the None ones
+        return result
+
     def update(self):
         """Execute changes."""
-        self._add_rdm_subjects()
-        self._rename_rdm_subjects()
+        deltas_cleaned = self._remove_unlabelled_actions_from_deltas(
+            self._ops_data
+        )
+        self._add_rdm_subjects(deltas_cleaned)
+        self._rename_rdm_subjects(deltas_cleaned)
 
-        self._update_rdm_records()
+        self._update_rdm_records(deltas_cleaned)
 
-        self._remove_rdm_subjects()
+        self._remove_rdm_subjects(deltas_cleaned)
 
-    def _add_rdm_subjects(self):
+    def _add_rdm_subjects(self, deltas):
         """Create subjects in instance from the add entries."""
         service = current_service_registry.get("subjects")
-        add_ops = filter_deltas_by_type(self._ops_data, "add")
-        for op in add_ops:
+        type_ = "add"
+        ops_add = filter_deltas_by_type(deltas, type_)
+        for op in ops_add:
             try:
                 service.create(
                     system_identity,
+                    # For add, only 1 Subject in subjects_dst
                     self._subject_rdm_serdes.serialize(op.subjects_dst[0]),
                 )
             except PIDAlreadyExists as e:
                 self._logger.log(
                     pid=e.pid_value,
-                    msg=f"PID '{e.pid_value}' already exists. Addition ignored.",  # noqa
+                    msg=f"PID '{e.pid_value}' already exists. '{type_}' ignored.",  # noqa
                 )
                 self._logger.flush()
 
-    def _rename_rdm_subjects(self):
-        """Rename subjects in the Subjects entries."""
+    def _rename_rdm_subjects(self, deltas):
+        """Rename subjects in instance via the edit entries."""
         service = current_service_registry.get("subjects")
-        rename_ops = filter_deltas_by_type(self._ops_data, "edit")
-        for op in rename_ops:
+        type_ = "edit"
+        ops_edit = filter_deltas_by_type(deltas, type_)
+        for op in ops_edit:
             service.update(
                 system_identity,
                 op.subject_src.id,
+                # For edit, only 1 Subject in subjects_dst
                 self._subject_rdm_serdes.serialize(op.subjects_dst[0]),
             )
 
-    def _update_rdm_records(self):
+    def _update_rdm_records(self, deltas):
         """Execute operations (replace/remove/rename) on RDM records."""
-        entries = get_records_to_update(self._ops_data, data_cls=RDMRecord)
+        entries = get_records_to_update(deltas, data_cls=RDMRecord)
         for record in entries:
             update_rdm_record(
                 record,
-                deltas=self._ops_data,
+                deltas=deltas,
                 logger=self._logger,
                 keep_trace=self._keep_trace,
             )
 
         # Don't keep trace for drafts
-        entries = get_records_to_update(self._ops_data, data_cls=RDMDraft)
+        entries = get_records_to_update(deltas, data_cls=RDMDraft)
         for draft in entries:
             update_rdm_record(
                 draft,
-                deltas=self._ops_data,
+                deltas=deltas,
                 logger=self._logger,
                 keep_trace=KeepTrace(None, None),  # noop KeepTrace
             )
 
-    def _remove_rdm_subjects(self):
+    def _remove_rdm_subjects(self, deltas):
         """Remove subjects from the Subjects entries.
 
         We have to resort to low-level commands because the high-level ones
@@ -320,7 +405,7 @@ class SubjectDeltaUpdater:
         and we should be fine (at least at time of writing).
         """
         ids_for_removal = [
-            d.subject_src.id for d in self._ops_data
+            d.subject_src.id for d in deltas
             if d.type in ["remove", "replace"]
         ]
         service = current_service_registry.get("subjects")

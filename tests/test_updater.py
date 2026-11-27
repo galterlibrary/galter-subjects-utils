@@ -695,6 +695,116 @@ def test_update_ignore_duplicate_subject_addition(
         e for e in entries_of_log if e.get("pid") == pid_of_subject
     )
     expected = (
-        "PID 'https://example.org/baa/1' already exists. Addition ignored."
+        "PID 'https://example.org/baa/1' already exists. 'add' ignored."
     )
     assert expected == log_entry["msg"]
+
+
+def test_update_ignore_unlabelled_subjects_dst(
+    create_subject_data,
+    subjects_service,
+):
+    # add, edit or replace by unlabelled subject should be ignored
+
+    # Have a pre-existing subject and try to add it
+    subject_pre_existing_1 = Subject(
+        id="https://example.org/baa/1",
+        scheme="BAA",
+        label="BAA 1",
+    )
+    subject_pre_existing_2 = Subject(
+        id="https://example.org/baa/2",
+        scheme="BAA",
+        label="BAA 2",
+    )
+
+    subject_new_unlabelled_1 = Subject(
+        id="https://example.org/baa/3",
+        scheme="BAA",
+        label="",
+    )
+
+    subject_rdm_serdes = SubjectRDMSerdes()
+    [
+        create_subject_data(
+            system_identity,
+            subject_rdm_serdes.serialize(s),
+        )
+        for s in [subject_pre_existing_1, subject_pre_existing_2]
+    ]
+
+    delta_ops = [
+        Delta(
+            type="add",
+            subjects_dst=(subject_new_unlabelled_1,),
+            keep_trace=False,
+        ),
+        Delta(
+            type="edit",
+            subject_src=subject_pre_existing_1,
+            subjects_dst=(
+                Subject(
+                    id=subject_pre_existing_1.id,
+                    scheme=subject_pre_existing_1.scheme,
+                    label="",
+                ),
+            ),
+            keep_trace=False,
+        ),
+        # Case - subjects_dst are modified (subject_new_unlabelled_1 removed)
+        Delta(
+            type="replace",
+            subject_src=subject_pre_existing_1,
+            subjects_dst=(subject_new_unlabelled_1, subject_pre_existing_2),
+            keep_trace=False,
+        ),
+        # Case - Delta removed (no valid replacements)
+        Delta(
+            type="replace",
+            subject_src=subject_pre_existing_2,
+            subjects_dst=(subject_new_unlabelled_1,),
+            keep_trace=False,
+        ),
+    ]
+    delta_logger = SubjectDeltaLogger()
+    noop_keep_trace = KeepTrace(None, None)
+
+    # Actions
+    updater = SubjectDeltaUpdater(delta_ops, delta_logger, noop_keep_trace)
+    updater.update()
+    # passing with no exception raised is a criteria
+
+    with pytest.raises(PIDDoesNotExistError):
+        subjects_service.read(system_identity, subject_new_unlabelled_1.id)
+
+    # Check messages in log
+    entries_of_log = delta_logger.read()
+    # Case - add
+    entry_of_log = next(
+        e
+        for e in entries_of_log
+        if e.get("pid") == subject_new_unlabelled_1.id
+    )
+    expected = (
+        f"PID '{subject_new_unlabelled_1.id}' is unlabelled. 'add' ignored."
+    )
+    assert expected == entry_of_log["msg"]
+    entries_for_pre_existing_1 = [
+        e for e in entries_of_log if e.get("pid") == subject_pre_existing_1.id
+    ]
+    # Case - edit
+    expected = (
+        f"Label '{subject_pre_existing_1.label}' would be removed. 'edit' ignored."  # noqa
+    )
+    assert expected == entries_for_pre_existing_1[0]["msg"]
+    # Case - replace 1
+    expected = f"Replacement PID '{subject_new_unlabelled_1.id}' is unlabelled. 'replace' ignored."  # noqa
+    assert expected == entries_for_pre_existing_1[1]["msg"]
+    # Case - replace 2
+    entry_of_log = next(
+        e
+        for e in entries_of_log
+        if e.get("pid") == subject_pre_existing_2.id
+    )
+    expected = f"Replacement PID '{subject_new_unlabelled_1.id}' is unlabelled. 'replace' ignored."  # noqa
+    assert expected == entry_of_log["msg"]
