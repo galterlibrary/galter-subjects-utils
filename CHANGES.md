@@ -1,5 +1,17 @@
 # Changes
 
+**Version 0.13.0 (released 2026-11-27)**
+
+*BREAKING CHANGES*
+- feat!: ignore but log duplicate subject additions
+  * SubjectDeltaLogger's interface changed
+- feat!: ignore add, edit, replace to a subject w/o label
+  * update log file headers changed
+  * which Deltas are processed changed
+*OTHER CHANGES*
+- tests: allow usage of breakpoints for debugging
+- fix: close the logger after CLI update (just for good measure)
+
 **Version 0.12.1 (released 2026-11-25)**
 
 - fix: listify SubjectsDstSerdes deserialization
